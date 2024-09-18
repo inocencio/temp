@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Visual Scripting Example</title>
+    <script defer src="script.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            background-color: #E5E5E5;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 200px;
+            padding: 15px;
+            background-color: #2D3748;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1; /* Ensure the sidebar is always on top */
+        }
+
+        .search-bar {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #FFF;
+            border-radius: 9999px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            padding: 10px 20px;
+            z-index: 2; /* Ensure the search bar is above everything else */
+            display: none;
+        }
+
+        .search-input {
+            width: 100%;
+            border: none;
+            outline: none;
+        }
+
+        .search-results {
+            background-color: #FFF;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            margin-top: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-result-item {
+            padding: 10px;
+            border-bottom: 1px solid #ccc; /* Add a separator line between items */
+            cursor: pointer;
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none; /* Remove bottom border for the last item */
+        }
+
+        .search-result-item:hover {
+            background-color: #f0f0f0; /* Light grey background on hover */
+        }
+
+        .search-results-container {
+            position: absolute;
+            top: 100%; /* Position right below the search bar */
+            width: 100%; /* Match search bar width */
+            max-height: 200px; /* Limit the height */
+            overflow-y: auto; /* Add scrolling for overflow */
+            border: 1px solid #ccc; /* Add border for separation */
+            background-color: #fff; /* Ensure background color is white */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Add slight shadow for effect */
+            z-index: 1000; /* Ensure it's above other elements */
+        }
+
+        .grid-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #3a4750;
+        }
+
+        .bg-grid {
+            background-image: 
+                linear-gradient(to right, #303841 1px, transparent 1px),
+                linear-gradient(to bottom, #303841 1px, transparent 1px);
+            background-size: 20px 20px;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            cursor: grab;
+        }
+
+        .modal-box {
+            width: 300px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: absolute;
+            padding: 20px;
+            border: 1px solid #E5E7EB;
+            transition: border-color 0.2s, box-shadow 0.2s; /* Add transition effect for box-shadow */
+            cursor: grab;
+        }
+
+        .modal-box.grabbing {
+            cursor: grabbing;
+        }
+
+        .modal-box.selected {
+            border-color: #3182CE; /* Visual focus for selected box */
+            box-shadow: 0 0 10px 2px #3182CE; /* Add a glowing "aura" around the box */
+        }
+
+        .connector-point {
+            width: 20px;
+            height: 20px;
+            background-color: blue;
+            position: absolute;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .svg-connector {
+            position: absolute;
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <h1 class="text-lg font-bold">Selected Component</h1>
+        <div id="selectedComponent" class="text-sm">None</div>
+    </div>
+    <div class="grid-container" id="grid">
+        <div class="bg-grid" id="grid-bg"></div>
+        <div class="modal-box" id="box1" style="top: 50px; left: 50px;">
+            <h3 class="text-lg font-bold">Box 1</h3>
+            <p class="text-sm text-gray-600">Some content here</p>
+            <div class="connector-point" id="connector1" style="bottom: -10px; right: -10px;"></div>
+        </div>
+        <div class="modal-box" id="box2" style="top: 300px; left: 300px;">
+            <h3 class="text-lg font-bold">Box 2</h3>
+            <p class="text-sm text-gray-600">Some content here</p>
+            <div class="connector-point" id="connector2" style="bottom: -10px; right: -10px;"></div>
+        </div>
+        <svg class="svg-connector"></svg>
+    </div>
+    <div id="searchBar" class="search-bar">
+        <input id="searchInput" type="text" class="search-input" placeholder="Search...">
+        <div id="searchResults" class="search-results-container hidden"></div>
+    </div>
+</body>
+</html>
