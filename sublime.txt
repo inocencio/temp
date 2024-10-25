@@ -1,0 +1,52 @@
+Settings:
+
+{
+  "font_size": 13,
+  "tab_size": 2,
+  "dark_theme": "Default Dark.sublime-theme",
+  "light_theme": "Default Dark.sublime-theme",
+  "theme": "auto",
+  "show_encoding" : true,
+  "ignored_packages":
+  [
+    "Vintage",
+  ],
+  "color_scheme": "Mariana.sublime-color-scheme",
+  "index_files": false,
+  "update_check": false,
+}
+
+Key Bindings:
+
+[
+{ "keys": ["alt+3"], "command": "toggle_side_bar" },
+{ "keys": ["alt+2"], "command": "next_view" },
+{ "keys": ["alt+1"], "command": "prev_view" },
+{ "keys": ["alt+w"], "command": "close" },
+{ "keys": ["alt+f1"], "command": "toggle_setting", "args": {"setting": "word_wrap"}},
+{ "keys": ["alt+e"], "command": "expand_selection", "args": {"to": "scope"} },
+{ "keys": ["ctrl+l"], "command": "expand_selection", "args": {"to": "line"} },
+{ "keys": ["ctrl+d"], "command": "find_under_expand" },
+{ "keys": ["ctrl+shift+a"], "command": "expand_selection", "args": {"to": "smart"} },
+{ "keys": ["ctrl+shift+m"], "command": "expand_selection", "args": {"to": "brackets"} },
+{ "keys": ["ctrl+shift+l"], "command": "split_selection_into_lines" },
+{ "keys": ["alt+q"], "command": "expand_selection", "args": {"to": "indentation"} },
+{ "keys": ["alt+shift+up"], "command": "swap_line_up" },
+{ "keys": ["alt+shift+down"], "command": "swap_line_down" },
+{ "keys": ["ctrl+shift+up"], "command": "select_lines", "args": {"forward": false} },
+{ "keys": ["ctrl+shift+down"], "command": "select_lines", "args": {"forward": true} },
+{ "keys": ["alt+d"], "command": "duplicate_line" },
+{ "keys": ["alt+shift+x"], "command": "mark" },
+{ "keys": ["alt+shift+d"], "command": "date_banner" },
+{ "keys": ["ctrl+shift+p"], "command": "show_overlay", "args": {"overlay": "command_palette"} },
+{ "keys": ["f9"], "command": "sort_lines", "args": {"case_sensitive": false} },
+{ "keys": ["ctrl+shift+h"], 
+  "command": "open_project_or_workspace", 
+  "args": {
+    "file": "c:/dev/config/sublime_ws_jboss_7_4.sublime-project",
+    "new_window": true
+  },
+},
+{"keys": ["ctrl+alt+b"],       "command": "blame"},
+{"keys": ["alt+shift+e"], "command": "blame_show_all"}
+]
