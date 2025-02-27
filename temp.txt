@@ -1,0 +1,6 @@
+https://www.freecodecamp.org/news/get-started-with-quarkus-and-jpastreamer-2/
+
+https://github.com/adilabed/awesome-quarkus
+https://github.com/quarkusio/quarkus-quickstarts
+https://github.com/quarkus-for-spring-developers/examples/tree/main
+https://github.com/amusarra/eventbus-logging-filter-jaxrs-docs
