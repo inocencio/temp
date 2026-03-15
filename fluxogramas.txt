@@ -1,0 +1,85 @@
+#################
+## Fluxogramas ##
+#################
+
+-----
+01) Modelo de fluxo de autenticação do usuário na aplicação
+
+sequenceDiagram
+    actor U as Usuário
+    participant A as Angular SPA
+    participant K as Keycloak
+    participant L as LDAP
+    participant Q as Microsserviço Quarkus
+    participant W as WebSocket Channel
+    participant M as Broker/Mensageria
+
+    U->>A: Acessa a aplicação
+    A->>K: Redireciona para autenticação
+    K->>L: Valida credenciais no LDAP
+    L-->>K: Credenciais válidas
+    K-->>A: Retorna Access Token JWT + Refresh Token
+    A-->>U: Usuário autenticado
+
+    U->>A: Executa ação na SPA
+    A->>A: Obtém token do provider de token
+    A->>Q: Requisição REST API com Authorization: Bearer JWT
+    Q->>K: Valida token / obtém chaves públicas
+    K-->>Q: Token válido
+    Q-->>A: Resposta da API
+    A-->>U: Exibe resultado
+
+    opt Comunicação em WebSocket
+        A->>W: Conecta com token JWT
+        W->>K: Valida token
+        K-->>W: Token válido
+        W-->>A: Canal autenticado
+        Q->>W: Publica evento em tempo real
+        W-->>A: Envia atualização em tempo real
+    end
+
+    opt Comunicação assíncrona por mensageria
+        Q->>M: Publica mensagem/evento
+        M-->>Q: Confirma recebimento
+    end
+
+-----
+02) Modelo de fluxo de Requisição da aplicação 
+
+sequenceDiagram
+    actor U as Usuário
+    participant A as Angular SPA
+    participant K as Keycloak
+    participant L as LDAP
+    participant Q as Microsserviço Quarkus
+    participant W as WebSocket Channel
+    participant M as Broker/Mensageria
+
+    U->>A: Acessa a aplicação
+    A->>K: Redireciona para autenticação
+    K->>L: Valida credenciais no LDAP
+    L-->>K: Credenciais válidas
+    K-->>A: Retorna Access Token JWT + Refresh Token
+    A-->>U: Usuário autenticado
+
+    U->>A: Executa ação na SPA
+    A->>A: Obtém token do provider de token
+    A->>Q: Requisição REST API com Authorization: Bearer JWT
+    Q->>K: Valida token / obtém chaves públicas
+    K-->>Q: Token válido
+    Q-->>A: Resposta da API
+    A-->>U: Exibe resultado
+
+    opt Comunicação em WebSocket
+        A->>W: Conecta com token JWT
+        W->>K: Valida token
+        K-->>W: Token válido
+        W-->>A: Canal autenticado
+        Q->>W: Publica evento em tempo real
+        W-->>A: Envia atualização em tempo real
+    end
+
+    opt Comunicação assíncrona por mensageria
+        Q->>M: Publica mensagem/evento
+        M-->>Q: Confirma recebimento
+    end

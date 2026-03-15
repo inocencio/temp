@@ -1,0 +1,193 @@
+#################
+## Fluxogramas ##
+#################
+
+01) Desenhe para mim um fluxograma que faça:
+
+1 - a relação de uma aplicação Angular SPA com um microsserviço Quarkus;
+2 - deve-se autentificar via LDAP usando keycloak;
+3 - as requisições entre a aplicação web e o microsserviço devem ser feitas usando REST API + JWT + TOKEN (usar o provider token), podem ser feitas também usando websocket e mensageria;
+4 - um fluxograma deve ser o padrão de sequência;
+
+Claro — para o seu caso, o mais adequado é um **diagrama de sequência** mostrando a interação entre:
+
+- **Usuário**
+- **Angular SPA**
+- **Keycloak**
+- **LDAP**
+- **Microsserviço Quarkus**
+- opcionalmente **WebSocket**
+- opcionalmente **Broker de Mensageria**
+
+Segue um fluxograma no **padrão de sequência** em **Mermaid**, que você pode colar em ferramentas compatíveis:
+
+```
+sequenceDiagram
+    actor U as Usuário
+    participant A as Angular SPA
+    participant K as Keycloak
+    participant L as LDAP
+    participant Q as Microsserviço Quarkus
+    participant W as WebSocket Channel
+    participant M as Broker/Mensageria
+
+    U->>A: Acessa a aplicação
+    A->>K: Redireciona para autenticação
+    K->>L: Valida credenciais no LDAP
+    L-->>K: Credenciais válidas
+    K-->>A: Retorna Access Token JWT + Refresh Token
+    A-->>U: Usuário autenticado
+
+    U->>A: Executa ação na SPA
+    A->>A: Obtém token do provider de token
+    A->>Q: Requisição REST API com Authorization: Bearer JWT
+    Q->>K: Valida token / obtém chaves públicas
+    K-->>Q: Token válido
+    Q-->>A: Resposta da API
+    A-->>U: Exibe resultado
+
+    opt Comunicação em WebSocket
+        A->>W: Conecta com token JWT
+        W->>K: Valida token
+        K-->>W: Token válido
+        W-->>A: Canal autenticado
+        Q->>W: Publica evento em tempo real
+        W-->>A: Envia atualização em tempo real
+    end
+
+    opt Comunicação assíncrona por mensageria
+        Q->>M: Publica mensagem/evento
+        M-->>Q: Confirma recebimento
+    end
+```
+
+
+### Leitura do fluxo
+1. O usuário entra na **Angular SPA**.  
+2. A SPA redireciona para o **Keycloak**.  
+3. O **Keycloak** autentica o usuário contra o **LDAP**.  
+4. Após sucesso, o Keycloak devolve um **JWT Access Token** e possivelmente um **Refresh Token**.  
+5. A SPA usa esse token nas chamadas para o **microsserviço Quarkus** via **REST API**.  
+6. O Quarkus valida o token recebido.  
+7. Opcionalmente, o sistema também pode se comunicar por:
+   - **WebSocket**, para tempo real;
+   - **Mensageria**, para processamento assíncrono.
+
+---
+
+Se quiser, também posso te entregar:
+
+1. **uma versão mais corporativa/bonita para documentação técnica**,  
+2. **uma versão em PlantUML**,  
+3. ou **um diagrama de arquitetura complementar** além do diagrama de sequência.
+
+------
+02) Certo, me cria um fluxograma em formato sequência com apenas a parte de quando o usuário for fazer o login na aplicação SPA
+
+sequenceDiagram
+    actor U as Usuário
+    participant A as Angular SPA
+    participant K as Keycloak
+    participant L as LDAP
+
+    U->>A: Acessa a aplicação SPA
+    A->>A: Verifica se existe token/sessão válida
+    A->>K: Redireciona para autenticação
+    K-->>U: Exibe tela de login
+    U->>K: Informa usuário e senha
+    K->>L: Valida credenciais no LDAP
+    L-->>K: Credenciais válidas
+    K->>K: Gera sessão e tokens
+    K-->>A: Retorna Access Token / ID Token / Refresh Token
+    A->>A: Armazena tokens e inicia sessão da SPA
+    A-->>U: Libera acesso à aplicação
+
+03) A minha aplicação é composta atualmente de 3 partes:
+
+a) Core: biblioteca/lib para suporte à aplicação. Tem DTOs, Enums, Interfaces (para serem implementadas em outras aplicações Java);
+b) Web: aplicação frontend em Backbone + jQuery EAR para JBoss que carrega Core como shared lib, implementa as interfaces, faz acesso ao banco de dados via EJB (@Inject, @Entity, etc.), Keycloak via JBoss;
+c) Batch: aplicação jar que é utiliza Core para implementar as interfaces Java e utilizar DTOs e Enums. Usa Spring Batch. A aplicação batch é acionada via Control-M;
+d) Alguns poucos testes unitários implementados, mas sem teste de integração ou funcionalidades;
+
+1 - Desenhe um fluxograma que apresenta essa arquitetura antiga acima definida.
+2 - Desenhe um outro fluxograma que também apresenta uma nova arquitetura usando Quarkus, Web com Angular (SPA), JS moderno ES2025, Agroal, Hibernate Panache, Lombok, Telemetry, OpenID com KeyCloak, testes unitários + testes de API + testes integrados + testes de batchs com idempotência.
+3 - Desenhe um diagrama/fluxograma comparativo entre as duas arquiteturas e apresente nele as melhores por utilizar a segunda arquitetura feita em Quarkus.
+
+3.1) Arquitetura antiga
+
+flowchart TD
+    U[Usuário] --> W[Web<br/>Depreciados: Backbone + jQuery]
+
+    subgraph LEGADO[Arquitetura Atual / Legada]
+        C[Core<br/>Lib compartilhada<br/>DTOs, Enums, Interfaces<br/>Implementação duplicada]
+        W
+        B[Batch<br/>JAR - Spring Batch]
+        DB[(Banco de Dados)]
+        KC[JBoss]
+        CTM[Control-M]
+        T[Testes<br/>Poucos testes unitários<br/>Sem testes de integração]
+    end
+
+    C --> W
+    C --> B
+
+    W -->|Implementa interfaces do Core| C
+    B -->|Implementa interfaces do Core| C
+
+    W -->|Depreciado: EJB / JPA| DB 
+    W -->|Autenticação| KC
+
+    CTM -->|Dispara execução| B
+    B -->|Leitura/Processamento/Gravação| DB
+
+    T -. Cobertura limitada .-> W
+    T -. Cobertura limitada .-> B
+
+3.2) Arquitetura Nova
+
+flowchart TD
+    U[Usuário] --> SPA[Web SPA<br/>Angular + JS moderno ES2025]
+
+    subgraph NOVA[Nova Arquitetura Moderna]
+        SPA
+        API[Backend Quarkus<br/>REST API]
+        KC[Keycloak<br/>OpenID Connect / OAuth2]
+        DB[(Banco de Dados)]
+        AG[Agroal<br/>Pool de conexões]
+        HP[Hibernate Panache]
+        L[Lombok]
+        TEL[Telemetry / Observabilidade<br/>Logs, métricas, traces]
+        BQ[Batch Quarkus / Java]
+        CTM[Control-M]
+        TEST[Testes<br/>Unitários + API + Integração + Batch<br/>com idempotência]
+        CORE2[Core Modernizado / Módulos compartilhados<br/>DTOs, Enums, Contratos]
+    end
+
+    SPA -->|Login via OpenID| KC
+    SPA -->|REST API + JWT Bearer Token| API
+
+    API -->|Validação de token| KC
+    API --> HP
+    API --> AG
+    HP --> DB
+    AG --> DB
+
+    API --> TEL
+    SPA --> TEL
+    BQ --> TEL
+
+    CORE2 --> API
+    CORE2 --> BQ
+
+    CTM -->|Aciona processamento| BQ
+    BQ -->|Processamento batch| DB
+    BQ -->|Regras reutilizáveis / contratos| CORE2
+
+    L -. Redução de boilerplate .-> API
+    L -. Redução de boilerplate .-> BQ
+
+    TEST --> SPA
+    TEST --> API
+    TEST --> BQ
+
+3.3) Comparativo entre arquiteturas

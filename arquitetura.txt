@@ -1,0 +1,14 @@
+https://quarkus.io/blog/quarkus-and-leyden/
+https://www.wallarm.com/cloud-native-products-101/quarkus-vs-spring-boot-java-frameworks-for-kubernetes
+
+1. Visão Geral — Macro arquitetura em 4 camadas (Cliente → Gateway → Serviços → Infra), mostrando todos os 5 microsserviços Quarkus, IBM API Manager, IBM MQ, Feature Flags e a app Angular integrados.
+
+2. Fluxo Batch — Pipeline completo de processamento em lote: trigger por Cron/Scheduler → verificação de Feature Flag → Job Manager → Partitioner → Workers paralelos (Reader/Processor/Writer) → estados de Sucesso, Erro (DLQ) e Restart com checkpoint.
+
+3. Mensageria IBM MQ — Filas e tópicos criados (BATCH.EVOLUCAO.REQ, BATCH.EVOLUCAO.RESP, DLQ, NOTIFY.FRONTEND.EVT), produtores/consumidores por MS, e os 4 padrões: Point-to-Point, Pub-Sub, Dead Letter Queue e Request-Reply.
+
+4. DevOps Azure — Pipeline com 7 stages (Code → Build → Test → Scan → Publish → Deploy → Monitor), os 4 ambientes (DEV/QA/HML/PROD), feature flags detalhadas por tipo (Release, Ops, Business, Experiment) e todos os recursos Azure (AKS, ACR, Key Vault, App Insights).
+
+5. Angular Intranet — Módulos lazy-loaded para todos os contextos mencionados (Contratos, Movimentos/Acerto, Simulação, Relatórios, Assinatura, Produtos, Dashboard, Admin), Core Module com guards e interceptors, e camada de API com SSE para notificações do Batch.
+
+6. Controle de Carga & API Manager — Policies do IBM API Manager, máquina de estados do Circuit Breaker, limites configuráveis do Batch (jobs concorrentes, chunk size, retry com backoff exponencial) e as anotações SmallRye Fault Tolerance do Quarkus.
