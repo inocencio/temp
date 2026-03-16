@@ -83,3 +83,148 @@ sequenceDiagram
         Q->>M: Publica mensagem/evento
         M-->>Q: Confirma recebimento
     end
+
+03)
+
+1 - Desenhe um fluxograma que apresenta essa arquitetura antiga acima definida.
+2 - Desenhe um outro fluxograma que também apresenta uma nova arquitetura usando Quarkus, Web com Angular (SPA), JS moderno ES2025, Agroal, Hibernate Panache, Lombok, Telemetry, OpenID com KeyCloak, testes unitários + testes de API + testes integrados + testes de batchs com idempotência.
+3 - Desenhe um diagrama/fluxograma comparativo entre as duas arquiteturas e apresente nele as melhores por utilizar a segunda arquitetura feita em Quarkus.
+
+3.1) Arquitetura antiga
+
+flowchart TD
+    U[Usuário] --> W[Web<br/>Depreciados: Backbone + jQuery]
+
+    subgraph LEGADO[Arquitetura Atual / Legada]
+        C[Core<br/>Lib compartilhada<br/>DTOs, Enums, Interfaces<br/>Implementação duplicada]
+        W
+        B[Batch<br/>JAR - Spring Batch]
+        DB[(Banco de Dados)]
+        KC[JBoss]
+        CTM[Control-M]
+        T[Testes<br/>Poucos testes unitários<br/>Sem testes de integração]
+    end
+
+    C --> W
+    C --> B
+
+    W -->|Implementa interfaces do Core| C
+    B -->|Implementa interfaces do Core| C
+
+    W -->|Depreciado: EJB / JPA| DB 
+    W -->|Autenticação| KC
+
+    CTM -->|Dispara execução| B
+    B -->|Leitura/Processamento/Gravação| DB
+
+    T -. Cobertura limitada .-> W
+    T -. Cobertura limitada .-> B
+
+3.2) Arquitetura Nova
+
+flowchart TD
+    U[Usuário] --> SPA[Web SPA<br/>Angular + JS moderno ES2025]
+
+    subgraph NOVA[Nova Arquitetura Moderna]
+        SPA
+        API[Backend Quarkus<br/>REST API]
+        KC[Keycloak<br/>OpenID Connect / OAuth2]
+        DB[(Banco de Dados)]
+        AG[Agroal<br/>Pool de conexões]
+        HP[Hibernate Panache]
+        L[Lombok]
+        TEL[Telemetry / Observabilidade<br/>Logs, métricas, traces]
+        BQ[Batch Quarkus / Java]
+        CTM[Control-M]
+        TEST[Testes<br/>Unitários + API + Integração + Batch<br/>com idempotência]
+        CORE2[Core Modernizado / Módulos compartilhados<br/>DTOs, Enums, Contratos]
+    end
+
+    SPA -->|Login via OpenID| KC
+    SPA -->|REST API + JWT Bearer Token| API
+
+    API -->|Validação de token| KC
+    API --> HP
+    API --> AG
+    HP --> DB
+    AG --> DB
+
+    API --> TEL
+    SPA --> TEL
+    BQ --> TEL
+
+    CORE2 --> API
+    CORE2 --> BQ
+
+    CTM -->|Aciona processamento| BQ
+    BQ -->|Processamento batch| DB
+    BQ -->|Regras reutilizáveis / contratos| CORE2
+
+    L -. Redução de boilerplate .-> API
+    L -. Redução de boilerplate .-> BQ
+
+    TEST --> SPA
+    TEST --> API
+    TEST --> BQ
+
+04) Comparativo de arquiteturas
+
+flowchart TD
+
+    T[Comparativo de Arquiteturas]
+
+    T --> H1
+    H1 --> A0
+    H1 --> B0
+
+    H1[Visão Geral]
+    A0[Arquitetura Antiga]
+    B0[Arquitetura Microsserviços]
+
+    A0 --> A1
+    B0 --> B1
+
+    A1[Frontend<br/>Backbone + jQuery<br/>frontend vinculado ao código Java monolítico]
+    B1[Frontend<br/>Angular<br/>TypeScript + JS moderno ES2025<br/>frontend desacoplado e independente do backend]
+
+    A1 --> A2
+    B1 --> B2
+
+    A2[Implementação de backend<br/>implementações duplicadas de processos definidos por interface<br/>restritas à única arquitetura monolítica]
+    B2[Implementação de backend<br/>implementações únicas e não duplicadas<br/>consumo por microsserviço responsável<br/>escalável para diferentes serviços]
+
+    A2 --> A3
+    B2 --> B3
+
+    A3[JVM<br/>mais lenta e com menos recursos modernos]
+    B3[JVM<br/>moderna com suporte a JIT e possibilidade de código nativo]
+
+    A3 --> A4
+    B3 --> B4
+
+    A4[Garbage Collector<br/>GC antigo, mais lento e com maior alocação de recursos]
+    B4[Garbage Collector<br/>ZGC moderno, de baixíssima latência e mais de 10x mais rápido que coletores antigos]
+
+    A4 --> A5
+    B4 --> B5
+
+    A5[Código<br/>mais verbose]
+    B5[Código<br/>mais limpo e menos verbose]
+
+    A5 --> A6
+    B5 --> B6
+
+    A6[Modelagem de domínio<br/>domínios restritos a DTOs e Enums]
+    B6[Modelagem de domínio<br/>DTOs, Enums e Records<br/>modelagem mais direta com equals, hashCode e toString automáticos]
+
+    A6 --> A7
+    B6 --> B7
+
+    A7[Concorrência<br/>threads comuns do SO<br/>mais bloqueios e maior uso de recursos]
+    B7[Concorrência<br/>Virtual Threads<br/>mais processos com menos recursos]
+
+    A7 --> A8
+    B7 --> B8
+
+    A8[Batch<br/>arquitetura presa ao Control-M e Spring Batch]
+    B8[Batch<br/>Quarkus + Scheduler<br/>Temporal.io / Quarkus Batch / JBeret]

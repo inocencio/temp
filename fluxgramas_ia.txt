@@ -191,3 +191,44 @@ flowchart TD
     TEST --> BQ
 
 3.3) Comparativo entre arquiteturas
+
+4)
+
+Faça um fluxograma comparativo com dois lados opostos laterais com suas medidas físicas proporcais onde:
+
+Lado A:
+
+Arquitetura Antiga
+* Frontend
+    - Backbone*
+    - jQuery*
+    - front vinculado ao código Java (monolítico)
+
+* Backend
+    - Implementações duplicadas de alguns processos defenidos via interface
+    - Implementações restritas à única arquitetura monolítica
+    - JVM mais lenta e com o código 100% interpretado
+    - GC antigo, lento e com maior alocação de recursos
+    - Código mais verbose
+    - Domínios restritos aos DTOs e Enums
+    - Threads comuns de SO com blocks mais constantes e que usam mais recursos
+    - Arquitetura batch presa ao Control-M e Spring Batch
+
+Lado B:
+
+Arquitetura Microsserviços
+* Frontend
+    - Angular
+    - TypeScript e JS moderno padrão ES2025
+    - front desacoplado e independente do código backend (microsserviços)
+
+* Backend
+    - Implementações únicas e não duplicadas. Quer consumir um recurso? Use o seu microsserviço.
+    - Implementaçòes escaláveis a diferentes serviços
+    - JVM moderna e com a possibilidade de rodar em código nativo e JIT.
+    - GC antigo, lento e com maior alocação de recursos
+    - GC modelo novo ZGC mais de 10x mais rápido que GC antigas
+    - Código mais limpo, menos verbose
+    - Domínios em DTOs, Enums e Records (mais direto e com auto equals, hashCode e toString)
+    - Virtual Threads permitem carregar mais processos e com menos recursos
+    - Arquitetura batch usando Quarkus + Scheduler (Temporal.io), Quarkus Batch (JBeret)
