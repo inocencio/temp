@@ -232,3 +232,89 @@ Arquitetura Microsserviços
     - Domínios em DTOs, Enums e Records (mais direto e com auto equals, hashCode e toString)
     - Virtual Threads permitem carregar mais processos e com menos recursos
     - Arquitetura batch usando Quarkus + Scheduler (Temporal.io), Quarkus Batch (JBeret)
+
+5) Comparativo
+
+graph TD
+    %% Título Principal
+    subgraph Title[Comparativo de Arquiteturas: Transição para o Moderno]
+        direction TB
+        TitleText(Modernização: Eficiência, Performance e UX)
+    end
+
+    %% Arquitetura Legada (Lado Esquerdo)
+    subgraph Legada[Arquitetura Legada (Monolítica/Imperativa)]
+        direction TB
+        
+        subgraph L_Front[Frontend: Manipulação do DOM]
+            L_JQuery[jQuery<br/>Manipulação Direta do DOM]
+            L_Backbone[Backbone.js<br/>Modelos, Views, Eventos]
+            L_JQuery -.->|Atualiza| L_DOM[Navegador DOM]
+            L_DOM -.->|Eventos| L_Backbone
+        end
+
+        subgraph L_Back[Backend: Java EE Monolítico]
+            L_EJB[EJB<br/>Enterprise JavaBeans]
+            L_AS[Servidor de Aplicação<br/>JBoss/WebSphere]
+            L_EJB --> L_AS
+        end
+
+        L_Front ==>|Chamadas AJAX| L_EJB
+    end
+
+    %% Arquitetura Moderna (Lado Direito)
+    subgraph Moderna[Arquitetura Moderna (Componentes/Reativa)]
+        direction TB
+        
+        subgraph M_Front[Frontend: Baseado em Componentes]
+            M_Angular[Angular<br/>Componentes, Módulos, DI]
+            M_TS[TypeScript / ES2025<br/>Tipagem Forte, Async/Await]
+            M_Angular ==> M_DOM[Navegador DOM (Otimizado)]
+            M_TS -.-> M_Angular
+        end
+
+        subgraph M_Back[Backend: Cloud-Native & Reativo]
+            M_Quarkus[Quarkus<br/>Kubernetes-Native, GraalVM]
+            M_Java[Java / Kotlin / Scala]
+            M_Quarkus -->|Execução Nativa/JVM| M_Java
+        end
+
+        M_Front ==>|APIs REST / gRPC| M_Quarkus
+    end
+
+    %% Tópicos de Comparação e Destaque
+    subgraph Comparativo[Destaques da Modernização]
+        direction LR
+        
+        subgraph Comp_UX[User Experience (UX)]
+            L_UX(UX Legada<br/>Navegação Lenta, Pág. Recarregadas) -- MELHORIA --> M_UX(UX Moderna<br/>SPA Fluido, Interatividade Instantânea)
+        end
+        
+        subgraph Comp_Perf[Performance]
+            L_Perf(Performance Legada<br/>Boot Lento EJB, Memory Footprint Alto) -- MELHORIA --> M_Perf(Performance Moderna<br/>Boot Instantâneo Quarkus, Memory Footprint Baixo)
+        end
+        
+        subgraph Comp_DX[Developer Experience (DX)]
+            L_DX(DX Legada<br/>Código Espaguete, Deploy Lento) -- MELHORIA --> M_DX(DX Moderna<br/>Código Estruturado Angular/TS, Live Reload)
+        end
+        
+        subgraph Comp_Test[Testes]
+            L_Test(Testes Legados<br/>Difícil Isolamento, Lento no Container) -- MELHORIA --> M_Test(Testes Modernos<br/>Projetado para Testabilidade, Testes Rápidos)
+        end
+        
+        Comp_UX --> Comp_Perf --> Comp_DX --> Comp_Test
+    end
+
+    %% Links entre as seções
+    Legada -.->|Transformação| Comparativo
+    Comparativo -.->|Arquitetura Alvo| Moderna
+
+    %% Estilização (Opcional, mas melhora a visualização no Mermaid)
+    %% style Legada fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    %% style Moderna fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
+    %% style Comparativo fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
+    %% style L_Front fill:#ffebee,stroke:#c62828,stroke-width:1px;
+    %% style L_Back fill:#ffebee,stroke:#c62828,stroke-width:1px;
+    %% style M_Front fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
+    %% style M_Back fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
+

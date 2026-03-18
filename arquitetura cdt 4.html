@@ -1,0 +1,946 @@
+import { useState } from "react";
+
+const diagrams = {
+  overview: {
+    title: "Visão Geral da Arquitetura",
+    subtitle: "Macro arquitetura do sistema de contratos de crédito",
+  },
+  batch: {
+    title: "Fluxo de Processamento Batch",
+    subtitle: "Evolução e acerto de contratos em lote",
+  },
+  messaging: {
+    title: "Arquitetura de Mensageria IBM MQ",
+    subtitle: "Filas, tópicos e fluxo de eventos",
+  },
+  devops: {
+    title: "Pipeline DevOps Azure",
+    subtitle: "CI/CD, feature flags e ambientes",
+  },
+  frontend: {
+    title: "Arquitetura Frontend Angular",
+    subtitle: "Módulos da intranet e integrações",
+  },
+  security: {
+    title: "Controle de Carga & API Manager",
+    subtitle: "Camadas de segurança e rate limiting",
+  },
+};
+
+const OverviewDiagram = () => (
+  <svg viewBox="0 0 900 620" className="w-full h-full" style={{fontFamily:"'Courier New', monospace"}}>
+    {/* Background grid */}
+    <defs>
+      <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+        <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1a2744" strokeWidth="0.5"/>
+      </pattern>
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+        <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#0d47a1" stopOpacity="0.9"/>
+        <stop offset="100%" stopColor="#1565c0" stopOpacity="0.7"/>
+      </linearGradient>
+      <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#1b5e20" stopOpacity="0.9"/>
+        <stop offset="100%" stopColor="#2e7d32" stopOpacity="0.7"/>
+      </linearGradient>
+      <linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#e65100" stopOpacity="0.9"/>
+        <stop offset="100%" stopColor="#f57c00" stopOpacity="0.7"/>
+      </linearGradient>
+      <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#4a148c" stopOpacity="0.9"/>
+        <stop offset="100%" stopColor="#6a1b9a" stopOpacity="0.7"/>
+      </linearGradient>
+    </defs>
+    <rect width="900" height="620" fill="#060d1f"/>
+    <rect width="900" height="620" fill="url(#grid)"/>
+
+    {/* Layer labels */}
+    <text x="15" y="90" fill="#4fc3f7" fontSize="9" fontWeight="bold" transform="rotate(-90,15,90)">CLIENTE</text>
+    <text x="15" y="230" fill="#4fc3f7" fontSize="9" fontWeight="bold" transform="rotate(-90,15,230)">GATEWAY</text>
+    <text x="15" y="390" fill="#4fc3f7" fontSize="9" fontWeight="bold" transform="rotate(-90,15,390)">SERVIÇOS</text>
+    <text x="15" y="545" fill="#4fc3f7" fontSize="9" fontWeight="bold" transform="rotate(-90,15,545)">INFRA</text>
+
+    {/* Horizontal dividers */}
+    <line x1="30" y1="140" x2="880" y2="140" stroke="#1a3a6e" strokeWidth="1" strokeDasharray="4,4"/>
+    <line x1="30" y1="280" x2="880" y2="280" stroke="#1a3a6e" strokeWidth="1" strokeDasharray="4,4"/>
+    <line x1="30" y1="460" x2="880" y2="460" stroke="#1a3a6e" strokeWidth="1" strokeDasharray="4,4"/>
+
+    {/* === CLIENT LAYER === */}
+    {/* Angular App */}
+    <rect x="120" y="30" width="160" height="90" rx="6" fill="url(#orangeGrad)" stroke="#ff8f00" strokeWidth="1.5"/>
+    <text x="200" y="55" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">Angular</text>
+    <text x="200" y="70" textAnchor="middle" fill="#ffe0b2" fontSize="9">Intranet App</text>
+    <text x="200" y="84" textAnchor="middle" fill="#ffcc80" fontSize="8">Contratos • Relatórios</text>
+    <text x="200" y="96" textAnchor="middle" fill="#ffcc80" fontSize="8">Simulação • Assinatura</text>
+    <text x="200" y="108" textAnchor="middle" fill="#ffcc80" fontSize="8">Produtos • Movimentos</text>
+
+    {/* Scheduler / Cron */}
+    <rect x="360" y="30" width="150" height="90" rx="6" fill="url(#purpleGrad)" stroke="#ab47bc" strokeWidth="1.5"/>
+    <text x="435" y="55" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">Scheduler</text>
+    <text x="435" y="70" textAnchor="middle" fill="#e1bee7" fontSize="9">Agendador de Lotes</text>
+    <text x="435" y="84" textAnchor="middle" fill="#ce93d8" fontSize="8">Cron Jobs / Timers</text>
+    <text x="435" y="96" textAnchor="middle" fill="#ce93d8" fontSize="8">Disparos automáticos</text>
+    <text x="435" y="108" textAnchor="middle" fill="#ce93d8" fontSize="8">por horário/evento</text>
+
+    {/* Feature Flags */}
+    <rect x="590" y="30" width="150" height="90" rx="6" fill="url(#greenGrad)" stroke="#66bb6a" strokeWidth="1.5"/>
+    <text x="665" y="52" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">Feature Flags</text>
+    <text x="665" y="67" textAnchor="middle" fill="#c8e6c9" fontSize="9">Feature Toggles</text>
+    <text x="665" y="81" textAnchor="middle" fill="#a5d6a7" fontSize="8">Rollout gradual</text>
+    <text x="665" y="93" textAnchor="middle" fill="#a5d6a7" fontSize="8">A/B Testing</text>
+    <text x="665" y="106" textAnchor="middle" fill="#a5d6a7" fontSize="8">Kill Switches</text>
+
+    {/* === GATEWAY LAYER === */}
+    {/* IBM API Manager */}
+    <rect x="80" y="165" width="180" height="90" rx="6" fill="url(#blueGrad)" stroke="#42a5f5" strokeWidth="2"/>
+    <text x="170" y="188" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">IBM API Manager</text>
+    <text x="170" y="203" textAnchor="middle" fill="#bbdefb" fontSize="9">API Gateway</text>
+    <text x="170" y="217" textAnchor="middle" fill="#90caf9" fontSize="8">Rate Limiting • Auth</text>
+    <text x="170" y="229" textAnchor="middle" fill="#90caf9" fontSize="8">Routing • Analytics</text>
+    <text x="170" y="241" textAnchor="middle" fill="#90caf9" fontSize="8">Throttling • Policies</text>
+
+    {/* Load Control */}
+    <rect x="310" y="165" width="160" height="90" rx="6" fill="#0d3348" stroke="#00acc1" strokeWidth="1.5"/>
+    <text x="390" y="188" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">Controle de Carga</text>
+    <text x="390" y="203" textAnchor="middle" fill="#b2ebf2" fontSize="9">Load Balancer</text>
+    <text x="390" y="217" textAnchor="middle" fill="#80deea" fontSize="8">Circuit Breaker</text>
+    <text x="390" y="229" textAnchor="middle" fill="#80deea" fontSize="8">Bulkhead Pattern</text>
+    <text x="390" y="241" textAnchor="middle" fill="#80deea" fontSize="8">Health Check</text>
+
+    {/* IBM MQ */}
+    <rect x="530" y="165" width="160" height="90" rx="6" fill="#1a237e" stroke="#7986cb" strokeWidth="1.5"/>
+    <text x="610" y="188" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">IBM MQ</text>
+    <text x="610" y="203" textAnchor="middle" fill="#c5cae9" fontSize="9">Mensageria</text>
+    <text x="610" y="217" textAnchor="middle" fill="#9fa8da" fontSize="8">Queues • Topics</text>
+    <text x="610" y="229" textAnchor="middle" fill="#9fa8da" fontSize="8">Dead Letter Queue</text>
+    <text x="610" y="241" textAnchor="middle" fill="#9fa8da" fontSize="8">Pub/Sub • Point2Point</text>
+
+    {/* === SERVICES LAYER === */}
+    {/* MS Contrato */}
+    <rect x="50" y="305" width="130" height="135" rx="6" fill="#0a1929" stroke="#ef5350" strokeWidth="1.5"/>
+    <text x="115" y="325" textAnchor="middle" fill="#ef9a9a" fontSize="10" fontWeight="bold">MS Contrato</text>
+    <text x="115" y="340" textAnchor="middle" fill="#ffcdd2" fontSize="8">Quarkus</text>
+    <rect x="65" y="348" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#ef5350" strokeWidth="0.5"/>
+    <text x="115" y="359" textAnchor="middle" fill="#ffcdd2" fontSize="7">Evolução Contrato</text>
+    <rect x="65" y="367" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#ef5350" strokeWidth="0.5"/>
+    <text x="115" y="378" textAnchor="middle" fill="#ffcdd2" fontSize="7">CRUD Contratos</text>
+    <rect x="65" y="386" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#ef5350" strokeWidth="0.5"/>
+    <text x="115" y="397" textAnchor="middle" fill="#ffcdd2" fontSize="7">Simulação</text>
+    <rect x="65" y="405" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#ef5350" strokeWidth="0.5"/>
+    <text x="115" y="416" textAnchor="middle" fill="#ffcdd2" fontSize="7">Acerto/Movimento</text>
+
+    {/* MS Batch */}
+    <rect x="205" y="305" width="130" height="135" rx="6" fill="#0a1929" stroke="#ab47bc" strokeWidth="1.5"/>
+    <text x="270" y="325" textAnchor="middle" fill="#ce93d8" fontSize="10" fontWeight="bold">MS Batch</text>
+    <text x="270" y="340" textAnchor="middle" fill="#e1bee7" fontSize="8">Quarkus + Scheduler</text>
+    <rect x="220" y="348" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#ab47bc" strokeWidth="0.5"/>
+    <text x="270" y="359" textAnchor="middle" fill="#e1bee7" fontSize="7">Job Processamento</text>
+    <rect x="220" y="367" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#ab47bc" strokeWidth="0.5"/>
+    <text x="270" y="378" textAnchor="middle" fill="#e1bee7" fontSize="7">Chunk Processing</text>
+    <rect x="220" y="386" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#ab47bc" strokeWidth="0.5"/>
+    <text x="270" y="397" textAnchor="middle" fill="#e1bee7" fontSize="7">Job Monitoring</text>
+    <rect x="220" y="405" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#ab47bc" strokeWidth="0.5"/>
+    <text x="270" y="416" textAnchor="middle" fill="#e1bee7" fontSize="7">Retry / Restart</text>
+
+    {/* MS Relatório */}
+    <rect x="360" y="305" width="130" height="135" rx="6" fill="#0a1929" stroke="#26a69a" strokeWidth="1.5"/>
+    <text x="425" y="325" textAnchor="middle" fill="#80cbc4" fontSize="10" fontWeight="bold">MS Relatório</text>
+    <text x="425" y="340" textAnchor="middle" fill="#b2dfdb" fontSize="8">Quarkus</text>
+    <rect x="375" y="348" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#26a69a" strokeWidth="0.5"/>
+    <text x="425" y="359" textAnchor="middle" fill="#b2dfdb" fontSize="7">Rel. Contratos</text>
+    <rect x="375" y="367" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#26a69a" strokeWidth="0.5"/>
+    <text x="425" y="378" textAnchor="middle" fill="#b2dfdb" fontSize="7">Rel. Financeiros</text>
+    <rect x="375" y="386" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#26a69a" strokeWidth="0.5"/>
+    <text x="425" y="397" textAnchor="middle" fill="#b2dfdb" fontSize="7">Export PDF/XLS</text>
+    <rect x="375" y="405" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#26a69a" strokeWidth="0.5"/>
+    <text x="425" y="416" textAnchor="middle" fill="#b2dfdb" fontSize="7">Dashboards</text>
+
+    {/* MS Assinatura */}
+    <rect x="515" y="305" width="130" height="135" rx="6" fill="#0a1929" stroke="#ffa726" strokeWidth="1.5"/>
+    <text x="580" y="325" textAnchor="middle" fill="#ffcc80" fontSize="10" fontWeight="bold">MS Assinatura</text>
+    <text x="580" y="340" textAnchor="middle" fill="#ffe0b2" fontSize="8">Quarkus</text>
+    <rect x="530" y="348" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#ffa726" strokeWidth="0.5"/>
+    <text x="580" y="359" textAnchor="middle" fill="#ffe0b2" fontSize="7">Ass. Digital</text>
+    <rect x="530" y="367" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#ffa726" strokeWidth="0.5"/>
+    <text x="580" y="378" textAnchor="middle" fill="#ffe0b2" fontSize="7">Validação</text>
+    <rect x="530" y="386" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#ffa726" strokeWidth="0.5"/>
+    <text x="580" y="397" textAnchor="middle" fill="#ffe0b2" fontSize="7">Certificados</text>
+    <rect x="530" y="405" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#ffa726" strokeWidth="0.5"/>
+    <text x="580" y="416" textAnchor="middle" fill="#ffe0b2" fontSize="7">Auditoria</text>
+
+    {/* MS Produto */}
+    <rect x="670" y="305" width="130" height="135" rx="6" fill="#0a1929" stroke="#42a5f5" strokeWidth="1.5"/>
+    <text x="735" y="325" textAnchor="middle" fill="#90caf9" fontSize="10" fontWeight="bold">MS Produto</text>
+    <text x="735" y="340" textAnchor="middle" fill="#bbdefb" fontSize="8">Quarkus</text>
+    <rect x="685" y="348" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#42a5f5" strokeWidth="0.5"/>
+    <text x="735" y="359" textAnchor="middle" fill="#bbdefb" fontSize="7">Catálogo Produtos</text>
+    <rect x="685" y="367" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#42a5f5" strokeWidth="0.5"/>
+    <text x="735" y="378" textAnchor="middle" fill="#bbdefb" fontSize="7">Regras Produto</text>
+    <rect x="685" y="386" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#42a5f5" strokeWidth="0.5"/>
+    <text x="735" y="397" textAnchor="middle" fill="#bbdefb" fontSize="7">Tabelas de Taxa</text>
+    <rect x="685" y="405" width="100" height="14" rx="2" fill="#1a1a2e" stroke="#42a5f5" strokeWidth="0.5"/>
+    <text x="735" y="416" textAnchor="middle" fill="#bbdefb" fontSize="7">Parametrização</text>
+
+    {/* === INFRA LAYER === */}
+    {/* DB */}
+    <rect x="60" y="480" width="110" height="55" rx="6" fill="#102027" stroke="#4dd0e1" strokeWidth="1.5"/>
+    <text x="115" y="502" textAnchor="middle" fill="#b2ebf2" fontSize="9" fontWeight="bold">PostgreSQL</text>
+    <text x="115" y="516" textAnchor="middle" fill="#80deea" fontSize="8">DB por MS</text>
+    <text x="115" y="528" textAnchor="middle" fill="#80deea" fontSize="7">Schema isolado</text>
+
+    {/* Cache */}
+    <rect x="195" y="480" width="110" height="55" rx="6" fill="#102027" stroke="#ef5350" strokeWidth="1.5"/>
+    <text x="250" y="502" textAnchor="middle" fill="#ffcdd2" fontSize="9" fontWeight="bold">Redis</text>
+    <text x="250" y="516" textAnchor="middle" fill="#ffcdd2" fontSize="8">Cache / Session</text>
+    <text x="250" y="528" textAnchor="middle" fill="#ef9a9a" fontSize="7">Rate limit state</text>
+
+    {/* DevOps */}
+    <rect x="330" y="480" width="130" height="55" rx="6" fill="#102027" stroke="#42a5f5" strokeWidth="1.5"/>
+    <text x="395" y="499" textAnchor="middle" fill="#90caf9" fontSize="9" fontWeight="bold">Azure DevOps</text>
+    <text x="395" y="513" textAnchor="middle" fill="#bbdefb" fontSize="8">Pipelines CI/CD</text>
+    <text x="395" y="527" textAnchor="middle" fill="#90caf9" fontSize="7">AKS • ACR • Key Vault</text>
+
+    {/* Monitoring */}
+    <rect x="485" y="480" width="120" height="55" rx="6" fill="#102027" stroke="#66bb6a" strokeWidth="1.5"/>
+    <text x="545" y="499" textAnchor="middle" fill="#a5d6a7" fontSize="9" fontWeight="bold">Observability</text>
+    <text x="545" y="513" textAnchor="middle" fill="#c8e6c9" fontSize="8">OpenTelemetry</text>
+    <text x="545" y="527" textAnchor="middle" fill="#a5d6a7" fontSize="7">Logs • Traces • Metrics</text>
+
+    {/* Service Mesh */}
+    <rect x="630" y="480" width="130" height="55" rx="6" fill="#102027" stroke="#ffa726" strokeWidth="1.5"/>
+    <text x="695" y="499" textAnchor="middle" fill="#ffe0b2" fontSize="9" fontWeight="bold">Service Mesh</text>
+    <text x="695" y="513" textAnchor="middle" fill="#ffcc80" fontSize="8">Kubernetes / Istio</text>
+    <text x="695" y="527" textAnchor="middle" fill="#ffcc80" fontSize="7">mTLS • Discovery</text>
+
+    {/* ARROWS - Client to Gateway */}
+    <line x1="200" y1="120" x2="200" y2="160" stroke="#ff8f00" strokeWidth="1.5" markerEnd="url(#arrow-orange)"/>
+    <line x1="435" y1="120" x2="390" y2="160" stroke="#ab47bc" strokeWidth="1.5"/>
+    <line x1="665" y1="120" x2="610" y2="160" stroke="#66bb6a" strokeWidth="1.5"/>
+
+    {/* Gateway to Services */}
+    <line x1="170" y1="255" x2="115" y2="300" stroke="#42a5f5" strokeWidth="1.5"/>
+    <line x1="170" y1="255" x2="270" y2="300" stroke="#42a5f5" strokeWidth="1.5"/>
+    <line x1="390" y1="255" x2="270" y2="300" stroke="#00acc1" strokeWidth="1"/>
+    <line x1="390" y1="255" x2="425" y2="300" stroke="#00acc1" strokeWidth="1"/>
+    <line x1="390" y1="255" x2="580" y2="300" stroke="#00acc1" strokeWidth="1"/>
+    <line x1="610" y1="255" x2="580" y2="300" stroke="#7986cb" strokeWidth="1"/>
+    <line x1="610" y1="255" x2="735" y2="300" stroke="#7986cb" strokeWidth="1"/>
+
+    {/* Services to Infra */}
+    <line x1="115" y1="440" x2="115" y2="475" stroke="#4dd0e1" strokeWidth="1" strokeDasharray="3,3"/>
+    <line x1="270" y1="440" x2="250" y2="475" stroke="#4dd0e1" strokeWidth="1" strokeDasharray="3,3"/>
+    <line x1="425" y1="440" x2="395" y2="475" stroke="#42a5f5" strokeWidth="1" strokeDasharray="3,3"/>
+    <line x1="580" y1="440" x2="545" y2="475" stroke="#66bb6a" strokeWidth="1" strokeDasharray="3,3"/>
+    <line x1="735" y1="440" x2="695" y2="475" stroke="#ffa726" strokeWidth="1" strokeDasharray="3,3"/>
+
+    {/* Arrow marker */}
+    <defs>
+      <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#ff8f00"/>
+      </marker>
+    </defs>
+
+    {/* Legend */}
+    <rect x="30" y="585" width="840" height="25" rx="3" fill="#0a1929" stroke="#1a3a6e" strokeWidth="1"/>
+    <circle cx="55" cy="597" r="4" fill="#ef5350"/>
+    <text x="65" y="601" fill="#ccc" fontSize="8">MS Contrato</text>
+    <circle cx="145" cy="597" r="4" fill="#ab47bc"/>
+    <text x="155" y="601" fill="#ccc" fontSize="8">MS Batch</text>
+    <circle cx="225" cy="597" r="4" fill="#26a69a"/>
+    <text x="235" y="601" fill="#ccc" fontSize="8">MS Relatório</text>
+    <circle cx="315" cy="597" r="4" fill="#ffa726"/>
+    <text x="325" y="601" fill="#ccc" fontSize="8">MS Assinatura</text>
+    <circle cx="415" cy="597" r="4" fill="#42a5f5"/>
+    <text x="425" y="601" fill="#ccc" fontSize="8">MS Produto</text>
+    <circle cx="505" cy="597" r="4" fill="#42a5f5"/>
+    <text x="515" y="601" fill="#ccc" fontSize="8">IBM API Manager</text>
+    <circle cx="620" cy="597" r="4" fill="#7986cb"/>
+    <text x="630" y="601" fill="#ccc" fontSize="8">IBM MQ</text>
+    <circle cx="695" cy="597" r="4" fill="#66bb6a"/>
+    <text x="705" y="601" fill="#ccc" fontSize="8">Feature Flags</text>
+  </svg>
+);
+
+const BatchDiagram = () => (
+  <svg viewBox="0 0 900 580" className="w-full h-full" style={{fontFamily:"'Courier New', monospace"}}>
+    <defs>
+      <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#4fc3f7"/>
+      </marker>
+      <marker id="arr-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#66bb6a"/>
+      </marker>
+      <marker id="arr-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#ef5350"/>
+      </marker>
+      <marker id="arr-orange" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#ffa726"/>
+      </marker>
+    </defs>
+    <rect width="900" height="580" fill="#060d1f"/>
+    <pattern id="grid2" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1a2744" strokeWidth="0.5"/>
+    </pattern>
+    <rect width="900" height="580" fill="url(#grid2)"/>
+
+    {/* Title box */}
+    <rect x="30" y="20" width="840" height="35" rx="4" fill="#0d1b2e" stroke="#4fc3f7" strokeWidth="1"/>
+    <text x="450" y="43" textAnchor="middle" fill="#4fc3f7" fontSize="13" fontWeight="bold">FLUXO DE PROCESSAMENTO BATCH - EVOLUÇÃO DE CONTRATOS</text>
+
+    {/* Step 1: Trigger */}
+    <rect x="30" y="80" width="150" height="70" rx="6" fill="#1a237e" stroke="#7986cb" strokeWidth="2"/>
+    <text x="105" y="103" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">TRIGGER</text>
+    <text x="105" y="118" textAnchor="middle" fill="#c5cae9" fontSize="8">Scheduler / Cron</text>
+    <text x="105" y="130" textAnchor="middle" fill="#9fa8da" fontSize="8">00:00 • 06:00</text>
+    <text x="105" y="142" textAnchor="middle" fill="#9fa8da" fontSize="8">12:00 • 18:00</text>
+
+    {/* Step 2: Feature Flag Check */}
+    <rect x="220" y="80" width="150" height="70" rx="6" fill="#1b5e20" stroke="#66bb6a" strokeWidth="2"/>
+    <text x="295" y="100" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">FEATURE FLAG</text>
+    <text x="295" y="114" textAnchor="middle" fill="#c8e6c9" fontSize="8">Batch habilitado?</text>
+    <text x="295" y="127" textAnchor="middle" fill="#a5d6a7" fontSize="8">Tipo de execução?</text>
+    <text x="295" y="140" textAnchor="middle" fill="#a5d6a7" fontSize="8">Rollout parcial?</text>
+
+    {/* Step 3: Job Manager */}
+    <rect x="410" y="80" width="150" height="70" rx="6" fill="#0d3348" stroke="#00acc1" strokeWidth="2"/>
+    <text x="485" y="100" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">JOB MANAGER</text>
+    <text x="485" y="114" textAnchor="middle" fill="#b2ebf2" fontSize="8">Quarkus Scheduler</text>
+    <text x="485" y="127" textAnchor="middle" fill="#80deea" fontSize="8">Criação de JobExecution</text>
+    <text x="485" y="140" textAnchor="middle" fill="#80deea" fontSize="8">Controle de Estado</text>
+
+    {/* Step 4: Load Control */}
+    <rect x="600" y="80" width="150" height="70" rx="6" fill="#102027" stroke="#4dd0e1" strokeWidth="2"/>
+    <text x="675" y="100" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">CARGA/RECURSOS</text>
+    <text x="675" y="114" textAnchor="middle" fill="#b2ebf2" fontSize="8">Controle de Carga</text>
+    <text x="675" y="127" textAnchor="middle" fill="#80deea" fontSize="8">Thread Pool</text>
+    <text x="675" y="140" textAnchor="middle" fill="#80deea" fontSize="8">Semáforo de Jobs</text>
+
+    {/* Arrows row 1 */}
+    <line x1="180" y1="115" x2="218" y2="115" stroke="#4fc3f7" strokeWidth="2" markerEnd="url(#arr)"/>
+    <line x1="370" y1="115" x2="408" y2="115" stroke="#4fc3f7" strokeWidth="2" markerEnd="url(#arr)"/>
+    <line x1="560" y1="115" x2="598" y2="115" stroke="#4fc3f7" strokeWidth="2" markerEnd="url(#arr)"/>
+
+    {/* Branch from Feature Flag - NO */}
+    <line x1="295" y1="150" x2="295" y2="175" stroke="#ef5350" strokeWidth="1.5" strokeDasharray="4,3"/>
+    <rect x="235" y="175" width="120" height="30" rx="3" fill="#b71c1c" stroke="#ef5350" strokeWidth="1"/>
+    <text x="295" y="195" textAnchor="middle" fill="#ffcdd2" fontSize="8">JOB CANCELADO</text>
+    <text x="218" y="168" fill="#ef5350" fontSize="8">NÃO</text>
+
+    {/* Chunk Processing */}
+    <rect x="30" y="230" width="840" height="120" rx="6" fill="#0a1929" stroke="#ab47bc" strokeWidth="1.5"/>
+    <text x="450" y="255" textAnchor="middle" fill="#ce93d8" fontSize="12" fontWeight="bold">CHUNK PROCESSING (PARTICIONAMENTO E PROCESSAMENTO PARALELO)</text>
+
+    {/* Partitioner */}
+    <rect x="50" y="265" width="140" height="70" rx="4" fill="#1a1a3e" stroke="#7986cb" strokeWidth="1.5"/>
+    <text x="120" y="285" textAnchor="middle" fill="#c5cae9" fontSize="9" fontWeight="bold">PARTITIONER</text>
+    <text x="120" y="299" textAnchor="middle" fill="#9fa8da" fontSize="8">Divide contratos</text>
+    <text x="120" y="311" textAnchor="middle" fill="#9fa8da" fontSize="8">em chunks de N</text>
+    <text x="120" y="323" textAnchor="middle" fill="#9fa8da" fontSize="8">registros</text>
+
+    {/* Workers */}
+    {[0,1,2].map(i => (
+      <g key={i}>
+        <rect x={230 + i*200} y="265" width="160" height="70" rx="4" fill="#0d2137" stroke="#00acc1" strokeWidth="1.5"/>
+        <text x={310 + i*200} y="283" textAnchor="middle" fill="#80deea" fontSize="9" fontWeight="bold">WORKER {i+1}</text>
+        <text x={310 + i*200} y="297" textAnchor="middle" fill="#b2ebf2" fontSize="8">Reader → Processor → Writer</text>
+        <text x={310 + i*200} y="311" textAnchor="middle" fill="#80deea" fontSize="7">Lê contratos do DB</text>
+        <text x={310 + i*200} y="323" textAnchor="middle" fill="#80deea" fontSize="7">Calcula evolução</text>
+      </g>
+    ))}
+
+    <line x1="190" y1="300" x2="228" y2="300" stroke="#7986cb" strokeWidth="1.5" markerEnd="url(#arr)"/>
+    <line x1="190" y1="300" x2="428" y2="300" stroke="#7986cb" strokeWidth="1.5" markerEnd="url(#arr)"/>
+    <line x1="190" y1="300" x2="628" y2="300" stroke="#7986cb" strokeWidth="1.5" markerEnd="url(#arr)"/>
+
+    {/* Processing steps */}
+    <rect x="30" y="375" width="840" height="80" rx="6" fill="#0a1929" stroke="#26a69a" strokeWidth="1.5"/>
+    <text x="450" y="396" textAnchor="middle" fill="#80cbc4" fontSize="11" fontWeight="bold">ETAPAS DO PROCESSADOR (por contrato)</text>
+
+    {["1. Lê Contrato", "2. Valida Regras", "3. Calcula Taxas", "4. Aplica Evolução", "5. Verifica Produto", "6. Persiste", "7. Notifica MQ"].map((step, i) => (
+      <g key={i}>
+        <rect x={40 + i*118} y="405" width="110" height="38" rx="3" fill="#102027" stroke="#26a69a" strokeWidth="1"/>
+        <text x={95 + i*118} y="420" textAnchor="middle" fill="#b2dfdb" fontSize="8" fontWeight="bold">{step.split(" ")[0]}</text>
+        <text x={95 + i*118} y="434" textAnchor="middle" fill="#80cbc4" fontSize="8">{step.split(" ").slice(1).join(" ")}</text>
+        {i < 6 && <line x1={150 + i*118} y1="424" x2={158 + i*118} y2="424" stroke="#26a69a" strokeWidth="1.5" markerEnd="url(#arr-green)"/>}
+      </g>
+    ))}
+
+    {/* Final states */}
+    <rect x="30" y="480" width="230" height="65" rx="6" fill="#1b5e20" stroke="#66bb6a" strokeWidth="2"/>
+    <text x="145" y="503" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">✓ SUCESSO</text>
+    <text x="145" y="518" textAnchor="middle" fill="#c8e6c9" fontSize="8">Job finalizado com êxito</text>
+    <text x="145" y="531" textAnchor="middle" fill="#a5d6a7" fontSize="8">Log • Métricas • Evento MQ</text>
+    <text x="145" y="544" textAnchor="middle" fill="#a5d6a7" fontSize="7">Notifica Angular via SSE/WS</text>
+
+    <rect x="280" y="480" width="230" height="65" rx="6" fill="#b71c1c" stroke="#ef5350" strokeWidth="2"/>
+    <text x="395" y="503" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">✗ ERRO PARCIAL</text>
+    <text x="395" y="518" textAnchor="middle" fill="#ffcdd2" fontSize="8">Skip + Dead Letter Queue</text>
+    <text x="395" y="531" textAnchor="middle" fill="#ffcdd2" fontSize="8">Retry automático (3x)</text>
+    <text x="395" y="544" textAnchor="middle" fill="#ef9a9a" fontSize="7">Alerta Operacional</text>
+
+    <rect x="530" y="480" width="230" height="65" rx="6" fill="#0d3348" stroke="#00acc1" strokeWidth="2"/>
+    <text x="645" y="503" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">↺ RESTART</text>
+    <text x="645" y="518" textAnchor="middle" fill="#b2ebf2" fontSize="8">Reinício a partir do</text>
+    <text x="645" y="531" textAnchor="middle" fill="#80deea" fontSize="8">último checkpoint</text>
+    <text x="645" y="544" textAnchor="middle" fill="#80deea" fontSize="7">Idempotência garantida</text>
+
+    <line x1="675" y1="230" x2="675" y2="158" stroke="#4fc3f7" strokeWidth="1.5" strokeDasharray="4,3" markerEnd="url(#arr)"/>
+    <text x="682" y="200" fill="#4fc3f7" fontSize="8">inicia</text>
+  </svg>
+);
+
+const MessagingDiagram = () => (
+  <svg viewBox="0 0 900 560" className="w-full h-full" style={{fontFamily:"'Courier New', monospace"}}>
+    <defs>
+      <marker id="amq" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#9fa8da"/>
+      </marker>
+    </defs>
+    <rect width="900" height="560" fill="#060d1f"/>
+    <pattern id="grid3" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1a2744" strokeWidth="0.5"/>
+    </pattern>
+    <rect width="900" height="560" fill="url(#grid3)"/>
+
+    <rect x="30" y="20" width="840" height="35" rx="4" fill="#0d1b2e" stroke="#9fa8da" strokeWidth="1"/>
+    <text x="450" y="43" textAnchor="middle" fill="#9fa8da" fontSize="13" fontWeight="bold">ARQUITETURA DE MENSAGERIA IBM MQ</text>
+
+    {/* IBM MQ Broker central */}
+    <rect x="310" y="200" width="280" height="170" rx="8" fill="#0d1442" stroke="#7986cb" strokeWidth="2"/>
+    <text x="450" y="225" textAnchor="middle" fill="#c5cae9" fontSize="12" fontWeight="bold">IBM MQ BROKER</text>
+    <text x="450" y="242" textAnchor="middle" fill="#9fa8da" fontSize="9">Queue Manager: QMGR_CREDITO</text>
+    <line x1="320" y1="250" x2="580" y2="250" stroke="#3949ab" strokeWidth="1"/>
+
+    {/* Queues inside */}
+    {[
+      ["BATCH.EVOLUCAO.REQ", "#1a237e", "#7986cb"],
+      ["BATCH.EVOLUCAO.RESP", "#1b5e20", "#66bb6a"],
+      ["CONTRATO.ACERTO.EVT", "#e65100", "#ffa726"],
+      ["DLQ.DEAD.LETTER", "#b71c1c", "#ef5350"],
+      ["NOTIFY.FRONTEND.EVT", "#4a148c", "#ab47bc"],
+    ].map(([name, bg, border], i) => (
+      <g key={i}>
+        <rect x="325" y={258 + i*19} width="250" height="15" rx="2" fill={bg} stroke={border} strokeWidth="1"/>
+        <text x="450" y={269 + i*19} textAnchor="middle" fill="white" fontSize="7.5">{name}</text>
+      </g>
+    ))}
+
+    {/* Producers - left */}
+    <rect x="30" y="80" width="150" height="55" rx="5" fill="#0a1929" stroke="#ab47bc" strokeWidth="1.5"/>
+    <text x="105" y="100" textAnchor="middle" fill="#ce93d8" fontSize="9" fontWeight="bold">MS Batch</text>
+    <text x="105" y="114" textAnchor="middle" fill="#e1bee7" fontSize="8">Produtor</text>
+    <text x="105" y="126" textAnchor="middle" fill="#ce93d8" fontSize="7">Envia eventos de lote</text>
+
+    <rect x="30" y="160" width="150" height="55" rx="5" fill="#0a1929" stroke="#ef5350" strokeWidth="1.5"/>
+    <text x="105" y="180" textAnchor="middle" fill="#ef9a9a" fontSize="9" fontWeight="bold">MS Contrato</text>
+    <text x="105" y="194" textAnchor="middle" fill="#ffcdd2" fontSize="8">Produtor/Consumidor</text>
+    <text x="105" y="206" textAnchor="middle" fill="#ef9a9a" fontSize="7">Eventos de acerto</text>
+
+    <rect x="30" y="240" width="150" height="55" rx="5" fill="#0a1929" stroke="#ffa726" strokeWidth="1.5"/>
+    <text x="105" y="260" textAnchor="middle" fill="#ffcc80" fontSize="9" fontWeight="bold">MS Assinatura</text>
+    <text x="105" y="274" textAnchor="middle" fill="#ffe0b2" fontSize="8">Produtor</text>
+    <text x="105" y="286" textAnchor="middle" fill="#ffcc80" fontSize="7">Eventos de assinatura</text>
+
+    <rect x="30" y="320" width="150" height="55" rx="5" fill="#0a1929" stroke="#26a69a" strokeWidth="1.5"/>
+    <text x="105" y="340" textAnchor="middle" fill="#80cbc4" fontSize="9" fontWeight="bold">MS Relatório</text>
+    <text x="105" y="354" textAnchor="middle" fill="#b2dfdb" fontSize="8">Consumidor</text>
+    <text x="105" y="366" textAnchor="middle" fill="#80cbc4" fontSize="7">Consome p/ alertas</text>
+
+    {/* Consumers - right */}
+    <rect x="720" y="80" width="150" height="55" rx="5" fill="#0a1929" stroke="#ab47bc" strokeWidth="1.5"/>
+    <text x="795" y="100" textAnchor="middle" fill="#ce93d8" fontSize="9" fontWeight="bold">MS Batch</text>
+    <text x="795" y="114" textAnchor="middle" fill="#e1bee7" fontSize="8">Consumidor</text>
+    <text x="795" y="126" textAnchor="middle" fill="#ce93d8" fontSize="7">Processa resposta</text>
+
+    <rect x="720" y="160" width="150" height="55" rx="5" fill="#0a1929" stroke="#ef5350" strokeWidth="1.5"/>
+    <text x="795" y="180" textAnchor="middle" fill="#ef9a9a" fontSize="9" fontWeight="bold">MS Contrato</text>
+    <text x="795" y="194" textAnchor="middle" fill="#ffcdd2" fontSize="8">Consumidor</text>
+    <text x="795" y="206" textAnchor="middle" fill="#ef9a9a" fontSize="7">Persiste atualizações</text>
+
+    <rect x="720" y="240" width="150" height="55" rx="5" fill="#0a1929" stroke="#4fc3f7" strokeWidth="1.5"/>
+    <text x="795" y="260" textAnchor="middle" fill="#b3e5fc" fontSize="9" fontWeight="bold">Angular/SSE</text>
+    <text x="795" y="274" textAnchor="middle" fill="#e1f5fe" fontSize="8">Consumidor</text>
+    <text x="795" y="286" textAnchor="middle" fill="#b3e5fc" fontSize="7">Notif. frontend real-time</text>
+
+    <rect x="720" y="320" width="150" height="55" rx="5" fill="#0a1929" stroke="#ffa726" strokeWidth="1.5"/>
+    <text x="795" y="340" textAnchor="middle" fill="#ffe0b2" fontSize="9" fontWeight="bold">DLQ Handler</text>
+    <text x="795" y="354" textAnchor="middle" fill="#ffe0b2" fontSize="8">Consumidor Especial</text>
+    <text x="795" y="366" textAnchor="middle" fill="#ffcc80" fontSize="7">Retry / Alertas</text>
+
+    {/* Arrows producers to MQ */}
+    {[107, 187, 267, 347].map((y, i) => (
+      <line key={i} x1="180" y1={y} x2="308" y2={290} stroke="#9fa8da" strokeWidth="1.2" markerEnd="url(#amq)" strokeDasharray="3,2"/>
+    ))}
+
+    {/* Arrows MQ to consumers */}
+    {[107, 187, 267, 347].map((y, i) => (
+      <line key={i} x1="592" y1={290} x2="718" y2={y} stroke="#9fa8da" strokeWidth="1.2" markerEnd="url(#amq)" strokeDasharray="3,2"/>
+    ))}
+
+    {/* Message patterns */}
+    <rect x="30" y="410" width="840" height="120" rx="6" fill="#0a1929" stroke="#3949ab" strokeWidth="1"/>
+    <text x="450" y="432" textAnchor="middle" fill="#9fa8da" fontSize="11" fontWeight="bold">PADRÕES DE MENSAGERIA UTILIZADOS</text>
+
+    {[
+      ["Point-to-Point (Queue)", "MS Batch → BATCH.EVOLUCAO.REQ → MS Batch Consumer\nProcessamento garantido uma vez", "#1a237e", "#7986cb"],
+      ["Publish-Subscribe (Topic)", "MS Contrato → CONTRATO.ACERTO.EVT → N consumers\nFan-out para múltiplos serviços", "#1b5e20", "#66bb6a"],
+      ["Dead Letter Queue", "Falhas → DLQ.DEAD.LETTER → DLQ Handler\nRetry c/ backoff exponencial", "#b71c1c", "#ef5350"],
+      ["Request-Reply", "Req → BATCH.EVOLUCAO.REQ → Resp → BATCH.EVOLUCAO.RESP\nCorrelation ID para rastreio", "#0d3348", "#00acc1"],
+    ].map(([title, desc, bg, border], i) => (
+      <g key={i}>
+        <rect x={40 + i*210} y="442" width="195" height="75" rx="4" fill={bg} stroke={border} strokeWidth="1.5"/>
+        <text x={137 + i*210} y="460" textAnchor="middle" fill="white" fontSize="8.5" fontWeight="bold">{title}</text>
+        {desc.split("\n").map((line, j) => (
+          <text key={j} x={137 + i*210} y={475 + j*14} textAnchor="middle" fill="#ccc" fontSize="7">{line}</text>
+        ))}
+      </g>
+    ))}
+  </svg>
+);
+
+const DevOpsDiagram = () => (
+  <svg viewBox="0 0 900 580" className="w-full h-full" style={{fontFamily:"'Courier New', monospace"}}>
+    <defs>
+      <marker id="adevops" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#42a5f5"/>
+      </marker>
+    </defs>
+    <rect width="900" height="580" fill="#060d1f"/>
+    <pattern id="grid4" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1a2744" strokeWidth="0.5"/>
+    </pattern>
+    <rect width="900" height="580" fill="url(#grid4)"/>
+    <rect x="30" y="20" width="840" height="35" rx="4" fill="#0d1b2e" stroke="#42a5f5" strokeWidth="1"/>
+    <text x="450" y="43" textAnchor="middle" fill="#42a5f5" fontSize="13" fontWeight="bold">PIPELINE AZURE DEVOPS — CI/CD + FEATURE FLAGS</text>
+
+    {/* Pipeline stages */}
+    {[
+      { x: 30, label: "CODE", sub: "Azure Repos\nGit + PR", color: "#1565c0", border: "#42a5f5" },
+      { x: 160, label: "BUILD", sub: "Maven/Quarkus\nDocker Build", color: "#0d47a1", border: "#1976d2" },
+      { x: 290, label: "TEST", sub: "Unit + Integ\nSonarQube", color: "#1a237e", border: "#3949ab" },
+      { x: 420, label: "SCAN", sub: "SAST/DAST\nTrivy/Snyk", color: "#0d3348", border: "#00acc1" },
+      { x: 550, label: "PUBLISH", sub: "ACR Push\nHelmChart", color: "#1b5e20", border: "#43a047" },
+      { x: 680, label: "DEPLOY", sub: "AKS Rolling\nBlue/Green", color: "#4a148c", border: "#7b1fa2" },
+      { x: 810, label: "MONITOR", sub: "AppInsights\nAlerts", color: "#e65100", border: "#fb8c00" },
+    ].map(({ x, label, sub, color, border }, i) => (
+      <g key={i}>
+        <rect x={x} y="75" width="115" height="80" rx="5" fill={color} stroke={border} strokeWidth="2"/>
+        <text x={x + 57} y="101" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">{label}</text>
+        {sub.split("\n").map((t, j) => (
+          <text key={j} x={x + 57} y={117 + j*14} textAnchor="middle" fill="#ddd" fontSize="8">{t}</text>
+        ))}
+        <text x={x + 57} y="70" textAnchor="middle" fill={border} fontSize="11" fontWeight="bold">{i + 1}</text>
+        {i < 6 && <line x1={x + 115} y1="115" x2={x + 160} y2="115" stroke="#42a5f5" strokeWidth="1.5" markerEnd="url(#adevops)"/>}
+      </g>
+    ))}
+
+    {/* Environments */}
+    <text x="450" y="195" textAnchor="middle" fill="#4fc3f7" fontSize="11" fontWeight="bold">── AMBIENTES ──</text>
+
+    {[
+      { x: 30, name: "DEV", detail: "Branch: feature/*\nDeploy automático\nFF: tudo ativo", color: "#0d3348", border: "#26c6da" },
+      { x: 240, name: "QA / TEST", detail: "Branch: develop\nAprovação auto\nFF: por config", color: "#1b5e20", border: "#66bb6a" },
+      { x: 450, name: "HOMOLOG", detail: "Branch: release/*\nAprov. manual\nFF: espelho prod", color: "#e65100", border: "#ffa726" },
+      { x: 660, name: "PRODUÇÃO", detail: "Branch: main/tag\nAprov. múltipla\nFF: gradual", color: "#4a148c", border: "#ab47bc" },
+    ].map(({ x, name, detail, color, border }, i) => (
+      <g key={i}>
+        <rect x={x} y="210" width="190" height="90" rx="5" fill={color} stroke={border} strokeWidth="2"/>
+        <text x={x + 95} y="230" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">{name}</text>
+        {detail.split("\n").map((t, j) => (
+          <text key={j} x={x + 95} y={247 + j*15} textAnchor="middle" fill="#ddd" fontSize="8">{t}</text>
+        ))}
+        {i < 3 && <line x1={x + 190} y1="255" x2={x + 240} y2="255" stroke="#4fc3f7" strokeWidth="1.5" markerEnd="url(#adevops)"/>}
+      </g>
+    ))}
+
+    {/* Feature Flags detail */}
+    <rect x="30" y="330" width="400" height="200" rx="6" fill="#0a1929" stroke="#66bb6a" strokeWidth="1.5"/>
+    <text x="230" y="353" textAnchor="middle" fill="#66bb6a" fontSize="11" fontWeight="bold">FEATURE FLAGS / TOGGLES</text>
+
+    {[
+      ["BATCH_EVOLUCAO_V2", "Release Toggle", "Nova lógica de evolução", "🟢"],
+      ["RELATORIO_PDF_ASYNC", "Ops Toggle", "Geração PDF assíncrona", "🟡"],
+      ["ASSINATURA_DIGITAL", "Business Toggle", "Módulo assinatura digital", "🟢"],
+      ["SIMULACAO_AVANCADA", "Experiment", "A/B test simulação", "🔵"],
+      ["BATCH_MODO_DEBUG", "Permission", "Log detalhado batch", "🔴"],
+    ].map(([flag, type, desc, status], i) => (
+      <g key={i}>
+        <rect x="45" y={363 + i*30} width="370" height="24" rx="3" fill="#0d1b2e" stroke="#1a3a6e" strokeWidth="1"/>
+        <text x="55" y={379 + i*30} fill="#fff" fontSize="8.5" fontFamily="monospace">{status} {flag}</text>
+        <text x="280" y={379 + i*30} fill="#80deea" fontSize="7.5">[{type}]</text>
+        <text x="55" y={388 + i*30} fill="#888" fontSize="6.5">{desc}</text>
+      </g>
+    ))}
+
+    {/* Azure resources */}
+    <rect x="460" y="330" width="410" height="200" rx="6" fill="#0a1929" stroke="#42a5f5" strokeWidth="1.5"/>
+    <text x="665" y="353" textAnchor="middle" fill="#42a5f5" fontSize="11" fontWeight="bold">RECURSOS AZURE</text>
+
+    {[
+      ["Azure Kubernetes Service (AKS)", "Orquestração dos microsserviços Quarkus"],
+      ["Azure Container Registry (ACR)", "Armazena imagens Docker dos MSs"],
+      ["Azure Key Vault", "Secrets, certs, connection strings"],
+      ["Application Insights", "Monitoramento, traces, alertas"],
+      ["Azure Service Bus / Event Hub", "Alternativa/complemento ao IBM MQ"],
+      ["Azure Pipelines", "CI/CD, YAML Pipelines, Gates"],
+    ].map(([title, desc], i) => (
+      <g key={i}>
+        <rect x="475" y={363 + i*28} width="380" height="22" rx="2" fill="#0d1b2e" stroke="#1a3a6e" strokeWidth="1"/>
+        <text x="485" y={377 + i*28} fill="#90caf9" fontSize="8.5" fontWeight="bold">{title}</text>
+        <text x="485" y={380 + i*28} fill="#555" fontSize="6">{"　　　　　　　　　　　　" + desc}</text>
+      </g>
+    ))}
+    {/* Fix desc rendering */}
+    {[
+      ["Orquestração dos microsserviços Quarkus"],
+      ["Armazena imagens Docker dos MSs"],
+      ["Secrets, certs, connection strings"],
+      ["Monitoramento, traces, alertas"],
+      ["Alternativa/complemento ao IBM MQ"],
+      ["CI/CD, YAML Pipelines, Gates"],
+    ].map(([desc], i) => (
+      <text key={i} x="660" y={377 + i*28} fill="#546e7a" fontSize="7">{desc}</text>
+    ))}
+  </svg>
+);
+
+const FrontendDiagram = () => (
+  <svg viewBox="0 0 900 560" className="w-full h-full" style={{fontFamily:"'Courier New', monospace"}}>
+    <rect width="900" height="560" fill="#060d1f"/>
+    <pattern id="grid5" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1a2744" strokeWidth="0.5"/>
+    </pattern>
+    <rect width="900" height="560" fill="url(#grid5)"/>
+    <rect x="30" y="20" width="840" height="35" rx="4" fill="#0d1b2e" stroke="#ff8f00" strokeWidth="1"/>
+    <text x="450" y="43" textAnchor="middle" fill="#ff8f00" fontSize="13" fontWeight="bold">ARQUITETURA FRONTEND ANGULAR — INTRANET DE CONTRATOS</text>
+
+    {/* Angular App Shell */}
+    <rect x="30" y="75" width="840" height="380" rx="8" fill="#0a1929" stroke="#ff8f00" strokeWidth="1.5"/>
+    <text x="450" y="97" textAnchor="middle" fill="#ff8f00" fontSize="11" fontWeight="bold">ANGULAR APPLICATION (SPA Intranet)</text>
+
+    {/* Core module */}
+    <rect x="50" y="105" width="160" height="330" rx="5" fill="#0d1b2e" stroke="#42a5f5" strokeWidth="1.5"/>
+    <text x="130" y="122" textAnchor="middle" fill="#90caf9" fontSize="9" fontWeight="bold">CORE MODULE</text>
+    {["AuthGuard", "HTTP Interceptors", "Feature Flag Svc", "Error Handler", "Loading Service", "SSE / WebSocket", "Token Refresh"].map((s, i) => (
+      <g key={i}>
+        <rect x="60" y={130 + i*38} width="140" height="30" rx="3" fill="#0a1929" stroke="#1a3a6e" strokeWidth="1"/>
+        <text x="130" y={149 + i*38} textAnchor="middle" fill="#bbdefb" fontSize="8">{s}</text>
+      </g>
+    ))}
+
+    {/* Feature modules */}
+    <rect x="230" y="105" width="620" height="330" rx="5" fill="#0d1b2e" stroke="#ff8f00" strokeWidth="1"/>
+    <text x="540" y="122" textAnchor="middle" fill="#ffcc80" fontSize="9" fontWeight="bold">FEATURE MODULES (Lazy Loaded)</text>
+
+    {[
+      { x: 240, y: 130, title: "Contratos", items: ["Listagem", "Detalhe", "Histórico", "Evolução"], color: "#ef5350" },
+      { x: 390, y: 130, title: "Movimentos", items: ["Acerto", "Ajuste Manual", "Aprovação", "Timeline"], color: "#ffa726" },
+      { x: 540, y: 130, title: "Simulação", items: ["Config Sim", "Cálculo", "Comparativo", "Exportar"], color: "#66bb6a" },
+      { x: 690, y: 130, title: "Relatórios", items: ["Financeiros", "Evolução", "Contratos", "Export"], color: "#42a5f5" },
+      { x: 240, y: 295, title: "Assinatura", items: ["Ass. Digital", "Validação", "Certificado", "Histórico"], color: "#ab47bc" },
+      { x: 390, y: 295, title: "Produtos", items: ["Catálogo", "Parametriz.", "Tabela Taxa", "Regras"], color: "#26a69a" },
+      { x: 540, y: 295, title: "Dashboard", items: ["Painel Ops", "Batch Status", "Alertas", "KPIs"], color: "#4fc3f7" },
+      { x: 690, y: 295, title: "Admin", items: ["Usuários", "Permissões", "Config FF", "Logs"], color: "#f06292" },
+    ].map(({ x, y, title, items, color }) => (
+      <g key={title}>
+        <rect x={x} y={y} width="138" height="148" rx="4" fill="#060d1f" stroke={color} strokeWidth="1.5"/>
+        <text x={x + 69} y={y + 16} textAnchor="middle" fill={color} fontSize="9" fontWeight="bold">{title}</text>
+        {items.map((item, j) => (
+          <g key={j}>
+            <rect x={x + 8} y={y + 23 + j * 29} width="122" height="22" rx="2" fill="#0d1b2e" stroke="#1a3a6e" strokeWidth="0.5"/>
+            <text x={x + 69} y={y + 38 + j * 29} textAnchor="middle" fill="#ccc" fontSize="7.5">{item}</text>
+          </g>
+        ))}
+      </g>
+    ))}
+
+    {/* Shared module */}
+    <rect x="30" y="470" width="840" height="65" rx="5" fill="#0d1b2e" stroke="#546e7a" strokeWidth="1"/>
+    <text x="450" y="490" textAnchor="middle" fill="#90a4ae" fontSize="9" fontWeight="bold">SHARED / API LAYER</text>
+    {[
+      ["IBM API Mgr Gateway", "#42a5f5"],
+      ["HTTP Services (REST)", "#66bb6a"],
+      ["SSE (Batch Notify)", "#ab47bc"],
+      ["NgRx Store (State)", "#ffa726"],
+      ["Feature Flag Client", "#ef5350"],
+      ["i18n / PT-BR", "#26a69a"],
+    ].map(([label, color], i) => (
+      <g key={i}>
+        <rect x={40 + i * 137} y="498" width="125" height="28" rx="3" fill="#060d1f" stroke={color} strokeWidth="1.2"/>
+        <text x={102 + i * 137} y="516" textAnchor="middle" fill={color} fontSize="8">{label}</text>
+      </g>
+    ))}
+  </svg>
+);
+
+const SecurityDiagram = () => (
+  <svg viewBox="0 0 900 580" className="w-full h-full" style={{fontFamily:"'Courier New', monospace"}}>
+    <defs>
+      <marker id="asec" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#4dd0e1"/>
+      </marker>
+    </defs>
+    <rect width="900" height="580" fill="#060d1f"/>
+    <pattern id="grid6" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1a2744" strokeWidth="0.5"/>
+    </pattern>
+    <rect width="900" height="580" fill="url(#grid6)"/>
+    <rect x="30" y="20" width="840" height="35" rx="4" fill="#0d1b2e" stroke="#4dd0e1" strokeWidth="1"/>
+    <text x="450" y="43" textAnchor="middle" fill="#4dd0e1" fontSize="13" fontWeight="bold">CONTROLE DE CARGA & IBM API MANAGER — FLUXO DE SEGURANÇA</text>
+
+    {/* Flow horizontal */}
+    {/* Client */}
+    <rect x="30" y="85" width="120" height="65" rx="5" fill="#e65100" fillOpacity="0.3" stroke="#ff8f00" strokeWidth="2"/>
+    <text x="90" y="110" textAnchor="middle" fill="#ffcc80" fontSize="10" fontWeight="bold">CLIENTE</text>
+    <text x="90" y="124" textAnchor="middle" fill="#ffcc80" fontSize="8">Angular App</text>
+    <text x="90" y="137" textAnchor="middle" fill="#ffa726" fontSize="7">HTTPS + JWT</text>
+
+    {/* API Manager */}
+    <rect x="190" y="75" width="160" height="90" rx="5" fill="#0d47a1" fillOpacity="0.7" stroke="#42a5f5" strokeWidth="2"/>
+    <text x="270" y="98" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">IBM API MANAGER</text>
+    <text x="270" y="112" textAnchor="middle" fill="#bbdefb" fontSize="8">OAuth2 / JWT Validation</text>
+    <text x="270" y="124" textAnchor="middle" fill="#90caf9" fontSize="7">API Key Enforcement</text>
+    <text x="270" y="136" textAnchor="middle" fill="#90caf9" fontSize="7">CORS • SSL Termination</text>
+    <text x="270" y="148" textAnchor="middle" fill="#90caf9" fontSize="7">API Versioning • Routing</text>
+
+    {/* Load Control */}
+    <rect x="390" y="75" width="160" height="90" rx="5" fill="#006064" fillOpacity="0.7" stroke="#4dd0e1" strokeWidth="2"/>
+    <text x="470" y="98" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">CONTROLE DE CARGA</text>
+    <text x="470" y="112" textAnchor="middle" fill="#b2ebf2" fontSize="8">Rate Limiting (req/s)</text>
+    <text x="470" y="124" textAnchor="middle" fill="#80deea" fontSize="7">Circuit Breaker (Resilience4j)</text>
+    <text x="470" y="136" textAnchor="middle" fill="#80deea" fontSize="7">Bulkhead (Thread Isolation)</text>
+    <text x="470" y="148" textAnchor="middle" fill="#80deea" fontSize="7">Retry + Timeout Policies</text>
+
+    {/* MS cluster */}
+    <rect x="590" y="75" width="160" height="90" rx="5" fill="#1b5e20" fillOpacity="0.7" stroke="#66bb6a" strokeWidth="2"/>
+    <text x="670" y="98" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">MICROSERVIÇOS</text>
+    <text x="670" y="112" textAnchor="middle" fill="#c8e6c9" fontSize="8">Quarkus (Kubernetes)</text>
+    <text x="670" y="124" textAnchor="middle" fill="#a5d6a7" fontSize="7">mTLS Service Mesh</text>
+    <text x="670" y="136" textAnchor="middle" fill="#a5d6a7" fontSize="7">RBAC interno</text>
+    <text x="670" y="148" textAnchor="middle" fill="#a5d6a7" fontSize="7">Health Endpoints</text>
+
+    {/* DB */}
+    <rect x="790" y="85" width="90" height="65" rx="5" fill="#102027" stroke="#4dd0e1" strokeWidth="2"/>
+    <text x="835" y="107" textAnchor="middle" fill="#b2ebf2" fontSize="9" fontWeight="bold">DATA</text>
+    <text x="835" y="121" textAnchor="middle" fill="#80deea" fontSize="7">PostgreSQL</text>
+    <text x="835" y="133" textAnchor="middle" fill="#80deea" fontSize="7">Redis Cache</text>
+
+    {/* Arrows */}
+    <line x1="150" y1="117" x2="188" y2="117" stroke="#4dd0e1" strokeWidth="2" markerEnd="url(#asec)"/>
+    <line x1="350" y1="117" x2="388" y2="117" stroke="#4dd0e1" strokeWidth="2" markerEnd="url(#asec)"/>
+    <line x1="550" y1="117" x2="588" y2="117" stroke="#4dd0e1" strokeWidth="2" markerEnd="url(#asec)"/>
+    <line x1="750" y1="117" x2="788" y2="117" stroke="#4dd0e1" strokeWidth="2" markerEnd="url(#asec)"/>
+
+    {/* Rate limit detail */}
+    <rect x="30" y="195" width="270" height="190" rx="6" fill="#0a1929" stroke="#42a5f5" strokeWidth="1.5"/>
+    <text x="165" y="215" textAnchor="middle" fill="#42a5f5" fontSize="10" fontWeight="bold">IBM API MANAGER — POLICIES</text>
+    {[
+      ["Rate Limiting", "100 req/min por usuário"],
+      ["Spike Arrest", "10 req/s burst control"],
+      ["OAuth 2.0", "Authorization Code Flow"],
+      ["JWT Verify", "RS256, exp, iss, aud"],
+      ["IP Allowlist", "Intranet CIDR apenas"],
+      ["Analytics", "Logs p/ App Insights"],
+    ].map(([policy, detail], i) => (
+      <g key={i}>
+        <rect x="45" y={224 + i*26} width="240" height="20" rx="2" fill="#0d1b2e" stroke="#1a3a6e" strokeWidth="1"/>
+        <text x="55" y={237 + i*26} fill="#90caf9" fontSize="8" fontWeight="bold">{policy}</text>
+        <text x="200" y={237 + i*26} fill="#546e7a" fontSize="7">{detail}</text>
+      </g>
+    ))}
+
+    {/* Circuit Breaker detail */}
+    <rect x="320" y="195" width="270" height="190" rx="6" fill="#0a1929" stroke="#4dd0e1" strokeWidth="1.5"/>
+    <text x="455" y="215" textAnchor="middle" fill="#4dd0e1" fontSize="10" fontWeight="bold">CIRCUIT BREAKER STATES</text>
+    {/* State machine */}
+    <rect x="340" y="225" width="90" height="35" rx="15" fill="#1b5e20" stroke="#66bb6a" strokeWidth="2"/>
+    <text x="385" y="247" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">CLOSED</text>
+    <rect x="460" y="225" width="90" height="35" rx="15" fill="#b71c1c" stroke="#ef5350" strokeWidth="2"/>
+    <text x="505" y="247" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">OPEN</text>
+    <rect x="400" y="285" width="90" height="35" rx="15" fill="#e65100" stroke="#ffa726" strokeWidth="2"/>
+    <text x="445" y="307" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">HALF-OPEN</text>
+    <line x1="430" y1="242" x2="458" y2="242" stroke="#ef5350" strokeWidth="1.5" markerEnd="url(#asec)"/>
+    <line x1="505" y1="260" x2="480" y2="283" stroke="#ffa726" strokeWidth="1.5" markerEnd="url(#asec)"/>
+    <line x1="400" y1="305" x2="385" y2="262" stroke="#66bb6a" strokeWidth="1.5" markerEnd="url(#asec)"/>
+    <text x="340" y="365" fill="#80deea" fontSize="7">Threshold: 50% falhas em 10s</text>
+    <text x="340" y="378" fill="#80deea" fontSize="7">Wait: 30s antes de HALF-OPEN</text>
+    <text x="340" y="391" fill="#80deea" fontSize="7">Probe: 3 req sucesso → CLOSED</text>
+
+    {/* Batch load control */}
+    <rect x="610" y="195" width="260" height="190" rx="6" fill="#0a1929" stroke="#ab47bc" strokeWidth="1.5"/>
+    <text x="740" y="215" textAnchor="middle" fill="#ce93d8" fontSize="10" fontWeight="bold">BATCH LOAD POLICIES</text>
+    {[
+      ["Max Jobs Concorrentes", "3 jobs simultâneos"],
+      ["Max Threads/Job", "10 workers por job"],
+      ["Chunk Size", "500 registros/chunk"],
+      ["Timeout por Chunk", "30 segundos"],
+      ["Max Retry", "3 tentativas"],
+      ["Backoff", "Exponencial (1s,2s,4s)"],
+      ["Throttle MQ", "50 msgs/s ao broker"],
+    ].map(([policy, detail], i) => (
+      <g key={i}>
+        <rect x="625" y={224 + i*23} width="230" height="18" rx="2" fill="#0d1b2e" stroke="#1a3a6e" strokeWidth="1"/>
+        <text x="635" y={236 + i*23} fill="#ce93d8" fontSize="8" fontWeight="bold">{policy}</text>
+        <text x="780" y={236 + i*23} fill="#9fa8da" fontSize="7">{detail}</text>
+      </g>
+    ))}
+
+    {/* Quarkus resilience */}
+    <rect x="30" y="405" width="840" height="140" rx="6" fill="#0a1929" stroke="#66bb6a" strokeWidth="1"/>
+    <text x="450" y="425" textAnchor="middle" fill="#66bb6a" fontSize="10" fontWeight="bold">QUARKUS RESILIENCE ANNOTATIONS (SmallRye Fault Tolerance)</text>
+    {[
+      { ann: "@CircuitBreaker", desc: "requestVolumeThreshold=20, failureRatio=0.5, delay=5s", use: "Todas as chamadas HTTP externas" },
+      { ann: "@Retry", desc: "maxRetries=3, delay=1000, jitter=200", use: "MQ, DB, APIs externas" },
+      { ann: "@Timeout", desc: "value=5000ms (REST) / 30000ms (Batch)", use: "Todos os métodos críticos" },
+      { ann: "@Bulkhead", desc: "value=10 (threads), waitingTaskQueue=5", use: "Isolamento por MS" },
+      { ann: "@Fallback", desc: "fallbackMethod = retornaCacheOuPadrao()", use: "Degradação elegante" },
+    ].map(({ ann, desc, use }, i) => (
+      <g key={i}>
+        <rect x="45" y={433 + i*20} width="810" height="16" rx="2" fill={i % 2 === 0 ? "#0d1b2e" : "#060d1f"} stroke="#1a3a6e" strokeWidth="0.5"/>
+        <text x="55" y={444 + i*20} fill="#80cbc4" fontSize="8" fontFamily="monospace">{ann}</text>
+        <text x="230" y={444 + i*20} fill="#546e7a" fontSize="7">{desc}</text>
+        <text x="650" y={444 + i*20} fill="#37474f" fontSize="7">{use}</text>
+      </g>
+    ))}
+  </svg>
+);
+
+const DIAGRAM_COMPONENTS = {
+  overview: OverviewDiagram,
+  batch: BatchDiagram,
+  messaging: MessagingDiagram,
+  devops: DevOpsDiagram,
+  frontend: FrontendDiagram,
+  security: SecurityDiagram,
+};
+
+export default function App() {
+  const [active, setActive] = useState("overview");
+  const DiagramComponent = DIAGRAM_COMPONENTS[active];
+
+  return (
+    <div style={{
+      background: "#030a14",
+      minHeight: "100vh",
+      fontFamily: "'Courier New', monospace",
+      color: "#cdd6f4",
+      padding: "0"
+    }}>
+      {/* Header */}
+      <div style={{
+        borderBottom: "1px solid #1a3a6e",
+        padding: "16px 24px",
+        background: "#060d1f",
+        display: "flex",
+        alignItems: "center",
+        gap: "16px"
+      }}>
+        <div style={{
+          width: "36px", height: "36px",
+          background: "linear-gradient(135deg, #1565c0, #0d47a1)",
+          borderRadius: "8px",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          border: "1px solid #42a5f5",
+          fontSize: "18px"
+        }}>⬡</div>
+        <div>
+          <div style={{ fontSize: "14px", fontWeight: "bold", color: "#4fc3f7", letterSpacing: "2px" }}>
+            SISTEMA DE EVOLUÇÃO DE CONTRATOS DE CRÉDITO
+          </div>
+          <div style={{ fontSize: "10px", color: "#546e7a", letterSpacing: "1px" }}>
+            ARQUITETURA MICROSSERVIÇOS · QUARKUS · IBM · AZURE DEVOPS
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{
+        display: "flex",
+        gap: "2px",
+        padding: "12px 24px 0",
+        background: "#060d1f",
+        borderBottom: "1px solid #1a3a6e",
+        flexWrap: "wrap"
+      }}>
+        {Object.entries(diagrams).map(([key, { title }]) => (
+          <button
+            key={key}
+            onClick={() => setActive(key)}
+            style={{
+              padding: "8px 16px",
+              background: active === key ? "#1565c0" : "transparent",
+              border: active === key ? "1px solid #42a5f5" : "1px solid #1a3a6e",
+              borderBottom: active === key ? "1px solid #1565c0" : "1px solid #1a3a6e",
+              borderRadius: "4px 4px 0 0",
+              color: active === key ? "#e3f2fd" : "#546e7a",
+              fontSize: "10px",
+              cursor: "pointer",
+              letterSpacing: "1px",
+              fontFamily: "'Courier New', monospace",
+              transition: "all 0.2s",
+              marginBottom: "-1px"
+            }}
+          >
+            {title.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      {/* Diagram area */}
+      <div style={{ padding: "20px 24px" }}>
+        <div style={{
+          background: "#060d1f",
+          border: "1px solid #1a3a6e",
+          borderRadius: "8px",
+          padding: "8px",
+          marginBottom: "12px"
+        }}>
+          <div style={{ fontSize: "10px", color: "#4fc3f7", letterSpacing: "1px", padding: "4px 8px" }}>
+            {diagrams[active].subtitle.toUpperCase()}
+          </div>
+        </div>
+        <div style={{
+          background: "#060d1f",
+          border: "1px solid #1a3a6e",
+          borderRadius: "8px",
+          overflow: "hidden",
+          aspectRatio: "900/600"
+        }}>
+          <DiagramComponent />
+        </div>
+      </div>
+
+      {/* Footer legend */}
+      <div style={{
+        padding: "12px 24px",
+        borderTop: "1px solid #1a3a6e",
+        display: "flex",
+        gap: "24px",
+        flexWrap: "wrap",
+        fontSize: "9px",
+        color: "#37474f"
+      }}>
+        {[
+          ["#ef5350", "MS Contrato"],
+          ["#ab47bc", "MS Batch"],
+          ["#26a69a", "MS Relatório"],
+          ["#ffa726", "MS Assinatura"],
+          ["#42a5f5", "MS Produto / Azure"],
+          ["#7986cb", "IBM MQ"],
+          ["#66bb6a", "Feature Flags"],
+          ["#ff8f00", "Angular"],
+          ["#4dd0e1", "Infra / Segurança"],
+        ].map(([color, label]) => (
+          <span key={label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ width: "8px", height: "8px", borderRadius: "2px", background: color, display: "inline-block" }}/>
+            {label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
