@@ -1,0 +1,234 @@
+=========
+== SSL ==
+=========
+
+------------------------------------------------------
+🔍 Passo 1: Extrair o Certificado do Servidor
+
+Primeiro, precisamos baixar o certificado do servidor remoto.
+
+Usando OpenSSL (Recomendado)
+
+# Extrair o certificado em formato PEM
+openssl s_client -connect meuhost.com:443 -servername meuhost.com </dev/null 2>/dev/null | \
+openssl x509 -outform PEM > meuhost-cert.pem
+
+# Verificar o conteúdo do certificado
+openssl x509 -in meuhost-cert.pem -text -noout
+
+Usando Java keytool (Alternativa)
+
+# Exportar certificado diretamente (funciona em alguns casos)
+echo -n | openssl s_client -connect meuhost.com:443 -servername meuhost.com | \
+sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > meuhost-cert.crt
+
+------------------------------------------------------
+Passo 2: Criar o Truststore JKS
+
+Agora vamos criar um arquivo JKS contendo o certificado extraído:
+
+Opção A: Criar um novo truststore JKS
+
+# Importar o certificado para um novo truststore JKS
+keytool -import -alias meuhost \
+  -file meuhost-cert.pem \
+  -keystore meuhost-truststore.jks \
+  -storepass suaSenhaAqui \
+  -noprompt
+
+# Verificar se o certificado foi importado
+keytool -list -v -keystore meuhost-truststore.jks -storepass suaSenhaAqui
+
+Opção B: Adicionar ao truststore existente
+
+# Adicionar a um truststore JKS existente
+keytool -import -alias meuhost \
+  -file meuhost-cert.pem \
+  -keystore truststore-existente.jks \
+  -storepass senhaExistente \
+  -noprompt
+
+------------------------------------------------------
+Passo 3: Criar Truststore PKCS12 (Alternativa Moderna)
+
+PKCS12 é o formato mais moderno e recomendado para Java 8+:
+
+# Criar truststore PKCS12
+keytool -import -alias meuhost \
+  -file meuhost-cert.pem \
+  -keystore meuhost-truststore.p12 \
+  -storetype PKCS12 \
+  -storepass suaSenhaAqui \
+  -noprompt
+
+# Verificar o conteúdo
+keytool -list -v -keystore meuhost-truststore.p12 -storetype PKCS12 -storepass suaSenhaAqui
+
+------------------------------------------------------
+Passo 4: Configurar no Spring Boot
+
+Opção 1: Usando parâmetros JVM (Recomendado para produção)
+
+java -jar sua-app.jar \
+  -Djavax.net.ssl.trustStore=/caminho/absoluto/para/meuhost-truststore.jks \
+  -Djavax.net.ssl.trustStorePassword=suaSenhaAqui \
+  -Djavax.net.ssl.trustStoreType=JKS
+
+Para PKCS12:
+
+java -jar sua-app.jar \
+  -Djavax.net.ssl.trustStore=/caminho/absoluto/para/meuhost-truststore.p12 \
+  -Djavax.net.ssl.trustStorePassword=suaSenhaAqui \
+  -Djavax.net.ssl.trustStoreType=PKCS12
+
+Opção 2: Configuração programática no Spring
+
+@Configuration
+public class SSLConfig {
+    
+    @Value("${truststore.path}")
+    private String truststorePath;
+    
+    @Value("${truststore.password}")
+    private String truststorePassword;
+    
+    @Bean
+    public RestTemplate restTemplate() throws Exception {
+        SSLContext sslContext = SSLContextBuilder
+            .create()
+            .loadTrustMaterial(
+                new File(truststorePath), 
+                truststorePassword.toCharArray(),
+                TrustSelfSignedStrategy.INSTANCE
+            )
+            .build();
+            
+        CloseableHttpClient httpClient = HttpClients.custom()
+            .setSSLContext(sslContext)
+            .build();
+            
+        HttpComponentsClientHttpRequestFactory factory = 
+            new HttpComponentsClientHttpRequestFactory(httpClient);
+            
+        return new RestTemplate(factory);
+    }
+}
+
+------------------------------------------------------
+🧪 Passo 5: Testar a Configuração
+
+Crie uma classe de teste simples:
+
+@Component
+public class CertificateTest {
+    
+    @Autowired
+    private RestTemplate restTemplate;
+    
+    @PostConstruct
+    public void testConnection() {
+        try {
+            ResponseEntity<String> response = restTemplate.getForEntity(
+                "https://meuhost.com/provider/token",
+                String.class
+            );
+            System.out.println("✅ Conexão SSL bem sucedida!");
+        } catch (Exception e) {
+            System.err.println("❌ Erro SSL: " + e.getMessage());
+        }
+    }
+}
+
+🚨 Tratando Problemas Comuns
+
+Problema 1: Cadeia de certificados incompleta
+
+Se o servidor usa certificados intermediários, você precisa importar a cadeia completa:
+
+# Baixar a cadeia completa
+openssl s_client -connect meuhost.com:443 -showcerts </dev/null 2>/dev/null | \
+awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/' > meuhost-fullchain.pem
+
+# Dividir em certificados individuais (se houver múltiplos)
+csplit -f cert- meuhost-fullchain.pem '/-----BEGIN CERTIFICATE-----/' '{*}'
+
+# Importar cada certificado
+keytool -import -alias meuhost-root -file cert-00 -keystore truststore.jks -storepass senha
+keytool -import -alias meuhost-intermediate -file cert-01 -keystore truststore.jks -storepass senha
+keytool -import -alias meuhost-leaf -file cert-02 -keystore truststore.jks -storepass senha
+
+Problema 2: Certificado auto-assinado
+
+Se for certificado auto-assinado, você pode usar a estratégia de confiança total (apenas para desenvolvimento):
+
+# Importar como confiável mesmo sendo auto-assinado
+keytool -import -alias meuhost-selfsigned \
+  -file meuhost-cert.pem \
+  -keystore truststore.jks \
+  -storepass senha \
+  -trustcacerts \
+  -noprompt
+
+Problema 3: Hostname mismatch
+
+Se o certificado é para um hostname diferente, você precisa configurar um HostnameVerifier:
+
+@Bean
+public RestTemplate restTemplateWithHostnameVerifier() throws Exception {
+    SSLContext sslContext = // ... configuração SSL
+    
+    CloseableHttpClient httpClient = HttpClients.custom()
+        .setSSLContext(sslContext)
+        .setSSLHostnameVerifier((hostname, session) -> {
+            // Aceita qualquer hostname (apenas para teste!)
+            return true;
+        })
+        .build();
+        
+    return new RestTemplate(new HttpComponentsClientHttpRequestFactory(httpClient));
+}
+
+📋 Script Completo Automatizado
+
+Crie um script setup-truststore.sh:
+
+#!/bin/bash
+
+HOST="meuhost.com"
+PORT="443"
+TRUSTSTORE_FILE="meuhost-truststore.jks"
+TRUSTSTORE_PASS="suaSenhaForte123"
+TRUSTSTORE_TYPE="JKS"
+
+echo "🔍 Extraindo certificado de $HOST:$PORT..."
+openssl s_client -connect $HOST:$PORT -servername $HOST </dev/null 2>/dev/null | \
+openssl x509 -outform PEM > $HOST-cert.pem
+
+if [ ! -s "$HOST-cert.pem" ]; then
+    echo "❌ Falha ao extrair certificado"
+    exit 1
+fi
+
+echo "✅ Certificado extraído com sucesso"
+
+echo "📦 Criando truststore $TRUSTSTORE_FILE..."
+keytool -import -alias $HOST \
+  -file $HOST-cert.pem \
+  -keystore $TRUSTSTORE_FILE \
+  -storepass $TRUSTSTORE_PASS \
+  -storetype $TRUSTSTORE_TYPE \
+  -noprompt
+
+if [ $? -eq 0 ]; then
+    echo "✅ Truststore criado com sucesso!"
+    echo "📍 Localização: $(pwd)/$TRUSTSTORE_FILE"
+    echo "🔑 Senha: $TRUSTSTORE_PASS"
+    echo ""
+    echo "🚀 Para usar, adicione ao seu comando Java:"
+    echo "-Djavax.net.ssl.trustStore=$(pwd)/$TRUSTSTORE_FILE"
+    echo "-Djavax.net.ssl.trustStorePassword=$TRUSTSTORE_PASS"
+    echo "-Djavax.net.ssl.trustStoreType=$TRUSTSTORE_TYPE"
+else
+    echo "❌ Falha ao criar truststore"
+    exit 1
+fi
