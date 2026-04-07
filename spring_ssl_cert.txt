@@ -232,3 +232,290 @@ else
     echo "❌ Falha ao criar truststore"
     exit 1
 fi
+
+--------------------------
+--------------------------
+
+🎯 Solução Completa para OAuth2 Client com Certificado Customizado
+
+1️⃣ Extrair e Configurar o Truststore (Como vimos)
+
+Primeiro, execute o script para criar o truststore do seu provider:
+
+#!/bin/bash
+# extract-provider-cert.sh
+
+PROVIDER_HOST="meuhost.com"
+TRUSTSTORE_FILE="provider-truststore.jks"
+TRUSTSTORE_PASS="changeit123"
+
+# Extrair certificado do provider
+openssl s_client -connect $PROVIDER_HOST:443 -servername $PROVIDER_HOST </dev/null 2>/dev/null | \
+openssl x509 -outform PEM > provider-cert.pem
+
+# Criar truststore
+keytool -import -alias provider-token \
+  -file provider-cert.pem \
+  -keystore $TRUSTSTORE_FILE \
+  -storepass $TRUSTSTORE_PASS \
+  -noprompt
+
+echo "✅ Truststore criado: $TRUSTSTORE_FILE"
+
+-Djavax.net.ssl.trustStore, sem precisar de configurações programáticas complexas. Vou te mostrar exatamente como fazer isso funcionar.
+
+🎯 Solução Puramente via Parâmetros JVM
+
+1️⃣ Prepare o Truststore (um vez só)
+
+#!/bin/bash
+# setup-truststore.sh
+
+# Extrair certificado do provider
+openssl s_client -connect meuhost.com:443 -servername meuhost.com </dev/null 2>/dev/null | \
+openssl x509 -outform PEM > provider-cert.pem
+
+# Criar truststore JKS
+keytool -import -alias provider-token \
+  -file provider-cert.pem \
+  -keystore my-truststore.jks \
+  -storepass changeit123 \
+  -noprompt
+
+echo "✅ Truststore criado: $(pwd)/my-truststore.jks"
+echo "🔑 Senha: changeit123"
+
+3️⃣ Inicie a Aplicação com os Parâmetros JVM
+
+# Opção 1: Via linha de comando Maven
+mvn spring-boot:run \
+  -Dspring-boot.run.jvmArguments="\
+    -Djavax.net.ssl.trustStore=/caminho/absoluto/my-truststore.jks \
+    -Djavax.net.ssl.trustStorePassword=changeit123 \
+    -Djavax.net.ssl.trustStoreType=JKS"
+
+# Opção 2: Via JAR diretamente
+java -jar \
+  -Djavax.net.ssl.trustStore=/caminho/absoluto/my-truststore.jks \
+  -Djavax.net.ssl.trustStorePassword=changeit123 \
+  -Djavax.net.ssl.trustStoreType=JKS \
+  minha-aplicacao.jar
+
+# Opção 3: Via variável de ambiente JAVA_OPTS
+export JAVA_OPTS="-Djavax.net.ssl.trustStore=/caminho/absoluto/my-truststore.jks -Djavax.net.ssl.trustStorePassword=changeit123 -Djavax.net.ssl.trustStoreType=JKS"
+java $JAVA_OPTS -jar minha-aplicacao.jar
+
+4️⃣ Código Java Simples para Obter e Usar o Token
+
+Agora, sem nenhuma configuração SSL especial no código, apenas use o Spring Security OAuth2 normalmente:
+
+@Service
+public class TokenService {
+    
+    // O Spring Security vai usar automaticamente o truststore configurado via JVM
+    @Autowired
+    private OAuth2AuthorizedClientManager authorizedClientManager;
+    
+    @Autowired
+    private RestTemplate restTemplate; // RestTemplate padrão do Spring
+    
+    public String getBearerToken() {
+        // Cria uma autenticação anônima para client_credentials
+        Authentication principal = new AnonymousAuthenticationToken(
+            "oauth2-client", 
+            "oauth2-client", 
+            AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS")
+        );
+        
+        OAuth2AuthorizeRequest request = OAuth2AuthorizeRequest
+            .withClientRegistrationId("my-client")
+            .principal(principal)
+            .build();
+        
+        OAuth2AuthorizedClient authorizedClient = authorizedClientManager.authorize(request);
+        
+        if (authorizedClient != null && authorizedClient.getAccessToken() != null) {
+            return authorizedClient.getAccessToken().getTokenValue();
+        }
+        
+        throw new RuntimeException("Não foi possível obter o token");
+    }
+    
+    // Método para fazer requisições usando o token
+    public String callProtectedEndpoint(String url) {
+        String token = getBearerToken();
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        
+        HttpEntity<?> entity = new HttpEntity<>(headers);
+        
+        ResponseEntity<String> response = restTemplate.exchange(
+            url,
+            HttpMethod.GET,
+            entity,
+            String.class
+        );
+        
+        return response.getBody();
+    }
+}
+
+5️⃣ Configuração Mínima do RestTemplate
+
+@Configuration
+public class AppConfig {
+    
+    // RestTemplate padrão - já vai usar o truststore da JVM
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+    
+    // Configuração do OAuth2 client (padrão, sem SSL customizado)
+    @Bean
+    public OAuth2AuthorizedClientManager authorizedClientManager(
+            ClientRegistrationRepository clientRegistrationRepository,
+            OAuth2AuthorizedClientService authorizedClientService) {
+        
+        DefaultOAuth2AuthorizedClientManager authorizedClientManager =
+            new DefaultOAuth2AuthorizedClientManager(
+                clientRegistrationRepository,
+                authorizedClientService);
+        
+        // Configura o contexto para client_credentials
+        authorizedClientManager.setContextAttributesMapper(
+            (request) -> {
+                Map<String, Object> context = new HashMap<>();
+                context.put(
+                    OAuth2AuthorizationContext.USERNAME_ATTRIBUTE_NAME,
+                    request.getPrincipal().getName()
+                );
+                return context;
+            }
+        );
+        
+        return authorizedClientManager;
+    }
+}
+
+6️⃣ Controller para Testar
+
+@RestController
+public class TestController {
+    
+    @Autowired
+    private TokenService tokenService;
+    
+    @GetMapping("/obter-token")
+    public ResponseEntity<Map<String, String>> getToken() {
+        try {
+            String token = tokenService.getBearerToken();
+            return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "token", token,
+                "type", "Bearer"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "status", "error",
+                "message", e.getMessage()
+            ));
+        }
+    }
+    
+    @GetMapping("/chamar-api-protegida")
+    public ResponseEntity<String> callProtectedApi() {
+        try {
+            String response = tokenService.callProtectedEndpoint("https://outra-api.com/dados");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Erro: " + e.getMessage());
+        }
+    }
+}
+
+8️⃣ Script de Inicialização Completo
+
+#!/bin/bash
+# run-app.sh
+
+# Configurações
+TRUSTSTORE_PATH="/opt/myapp/config/my-truststore.jks"
+TRUSTSTORE_PASS="changeit123"
+JAR_PATH="/opt/myapp/myapp.jar"
+
+# Verifica se o truststore existe
+if [ ! -f "$TRUSTSTORE_PATH" ]; then
+    echo "❌ Truststore não encontrado em $TRUSTSTORE_PATH"
+    exit 1
+fi
+
+# Executa a aplicação com os parâmetros JVM
+java \
+  -Djavax.net.ssl.trustStore="$TRUSTSTORE_PATH" \
+  -Djavax.net.ssl.trustStorePassword="$TRUSTSTORE_PASS" \
+  -Djavax.net.ssl.trustStoreType="JKS" \
+  -jar "$JAR_PATH"
+
+9️⃣ Verificação Rápida
+
+Para confirmar que o truststore está sendo carregado:
+
+@Component
+public class SSLVerifier {
+    
+    @PostConstruct
+    public void verifySSLConfig() {
+        String trustStore = System.getProperty("javax.net.ssl.trustStore");
+        String trustStorePassword = System.getProperty("javax.net.ssl.trustStorePassword");
+        String trustStoreType = System.getProperty("javax.net.ssl.trustStoreType");
+        
+        System.out.println("=== Configuração SSL ===");
+        System.out.println("TrustStore: " + trustStore);
+        System.out.println("TrustStore Type: " + trustStoreType);
+        System.out.println("TrustStore Password: " + (trustStorePassword != null ? "***" : "not set"));
+        
+        if (trustStore != null && new File(trustStore).exists()) {
+            System.out.println("✅ Truststore encontrado e configurado");
+        } else {
+            System.err.println("❌ Truststore NÃO configurado ou arquivo não encontrado");
+        }
+    }
+}
+
+📋 Checklist Final
+
+Extrair certificado do provider: openssl s_client -connect meuhost.com:443
+Criar truststore JKS com o certificado
+Colocar o truststore em um local acessível
+Configurar -Djavax.net.ssl.trustStore no startup
+Configurar -Djavax.net.ssl.trustStorePassword
+Configurar -Djavax.net.ssl.trustStoreType=JKS
+Verificar se o Spring Security OAuth2 está configurado corretamente
+
+✅ Vantagens desta abordagem
+
+Código limpo - sem lógica de SSL no código Java
+Transparente - Spring, RestTemplate e OAuth2 client usam automaticamente
+Fácil manutenção - trocar certificado é só atualizar o arquivo JKS
+Seguro - configuração centralizada nos parâmetros da JVM
+Portável - funciona em qualquer ambiente (dev, staging, produção)
+🚨 Solução de problemas
+
+Se ainda der erro PKIX mesmo com os parâmetros JVM:
+
+# Debug SSL para ver o que está acontecendo
+java -Djavax.net.debug=ssl:handshake:verbose \
+  -Djavax.net.ssl.trustStore=/path/my-truststore.jks \
+  -Djavax.net.ssl.trustStorePassword=changeit123 \
+  -jar app.jar
+
+Com essa configuração, seu Spring Boot vai conseguir:
+
+✅ Conectar ao provider token via HTTPS
+✅ Validar o certificado usando seu truststore
+✅ Obter o bearer token usando client-id/secret
+✅ Fazer requisições subsequentes com o token
+Tudo isso sem nenhum código especial de SSL - apenas os parâmetros
