@@ -1,0 +1,261 @@
+Entendido! A correção é pontual mas importante — JKS (Java KeyStore) é o formato nativo do Java, diferente de JWS (JSON Web Signature). Vou ajustar os pontos relevantes nos dois cenários.
+
+O que muda com JKS explícito
+No cenário A, o Spring já lida com JKS automaticamente quando você passa -Djavax.net.ssl.trustStore, mas vale garantir o tipo explicitamente. No cenário B, o SslContextFactory precisa forçar JKS e, se necessário, também carregar um keystore (certificado do cliente para mTLS), não apenas o truststore.
+
+Cenário A — Spring com RestTemplate + JKS explícito
+
+Se o seu provider exige apenas que você confie no certificado dele (truststore), o OAuth2RestTemplate já resolve via JVM. Mas se precisar também apresentar um certificado cliente (mTLS), é necessário customizar o ClientHttpRequestFactory.
+oauth2-context.xml — com SSL factory explícita
+
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+         http://www.springframework.org/schema/beans
+         http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- 1. Factory de SSL — lê os JKS configurados na JVM -->
+    <bean id="sslRequestFactory"
+          class="com.exemplo.http.JksSslRequestFactory"/>
+
+    <!-- 2. Credenciais OAuth2 -->
+    <bean id="clientCredentials"
+          class="org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsResourceDetails">
+        <property name="accessTokenUri" value="${oauth.token.uri}"/>
+        <property name="clientId"       value="${oauth.client.id}"/>
+        <property name="clientSecret"   value="${oauth.client.secret}"/>
+        <property name="grantType"      value="client_credentials"/>
+    </bean>
+
+    <!-- 3. OAuth2RestTemplate com SSL factory customizada -->
+    <bean id="oAuth2RestTemplate"
+          class="org.springframework.security.oauth2.client.OAuth2RestTemplate">
+        <constructor-arg ref="clientCredentials"/>
+        <property name="requestFactory" ref="sslRequestFactory"/>
+    </bean>
+
+</beans>
+
+JksSslRequestFactory.java — lê e processa o JKS
+
+package com.exemplo.http;
+
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+
+import javax.net.ssl.*;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.security.KeyStore;
+
+/**
+ * ClientHttpRequestFactory que aplica SSL/TLS com JKS processados explicitamente.
+ *
+ * Lê as propriedades de sistema:
+ *   -Djavax.net.ssl.trustStore          → JKS com certificados confiáveis (CA do provider)
+ *   -Djavax.net.ssl.trustStorePassword  → senha do truststore
+ *   -Djavax.net.ssl.keyStore            → JKS com certificado do cliente (mTLS, opcional)
+ *   -Djavax.net.ssl.keyStorePassword    → senha do keystore do cliente
+ */
+public class JksSslRequestFactory extends SimpleClientHttpRequestFactory {
+
+    private final SSLSocketFactory sslSocketFactory;
+
+    public JksSslRequestFactory() {
+        try {
+            this.sslSocketFactory = buildSslSocketFactory();
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                "Falha ao inicializar SSL a partir dos JKS configurados", e);
+        }
+    }
+
+    @Override
+    protected void prepareConnection(HttpURLConnection conn,
+                                     String httpMethod) throws IOException {
+        if (conn instanceof HttpsURLConnection) {
+            ((HttpsURLConnection) conn).setSSLSocketFactory(sslSocketFactory);
+        }
+        super.prepareConnection(conn, httpMethod);
+    }
+
+    // -------------------------------------------------------------------------
+
+    private static SSLSocketFactory buildSslSocketFactory() throws Exception {
+        TrustManager[] trustManagers = loadTrustManagers();
+        KeyManager[]   keyManagers   = loadKeyManagers();   // null se keyStore não informado
+
+        SSLContext ctx = SSLContext.getInstance("TLS");
+        ctx.init(keyManagers, trustManagers, null);
+        return ctx.getSocketFactory();
+    }
+
+    /** Carrega o truststore JKS (-Djavax.net.ssl.trustStore). */
+    private static TrustManager[] loadTrustManagers() throws Exception {
+        String path     = System.getProperty("javax.net.ssl.trustStore");
+        String password = System.getProperty("javax.net.ssl.trustStorePassword", "");
+
+        if (path == null) {
+            // Sem truststore explícito: usa o cacerts padrão da JVM
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance(
+                TrustManagerFactory.getDefaultAlgorithm());
+            tmf.init((KeyStore) null);
+            return tmf.getTrustManagers();
+        }
+
+        KeyStore ts = loadJks(path, password);
+
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance(
+            TrustManagerFactory.getDefaultAlgorithm());
+        tmf.init(ts);
+        return tmf.getTrustManagers();
+    }
+
+    /**
+     * Carrega o keystore JKS do cliente (-Djavax.net.ssl.keyStore).
+     * Retorna null se não configurado (sem mTLS).
+     */
+    private static KeyManager[] loadKeyManagers() throws Exception {
+        String path     = System.getProperty("javax.net.ssl.keyStore");
+        String password = System.getProperty("javax.net.ssl.keyStorePassword", "");
+
+        if (path == null) {
+            return null;
+        }
+
+        KeyStore ks = loadJks(path, password);
+
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance(
+            KeyManagerFactory.getDefaultAlgorithm());
+        kmf.init(ks, password.toCharArray());
+        return kmf.getKeyManagers();
+    }
+
+    /** Abre e carrega um arquivo JKS do disco. */
+    private static KeyStore loadJks(String path, String password) throws Exception {
+        KeyStore ks = KeyStore.getInstance("JKS");
+        try (FileInputStream fis = new FileInputStream(path)) {
+            ks.load(fis, password.toCharArray());
+        }
+        return ks;
+    }
+}
+
+Cenário B — Java puro com JKS processados explicitamente
+A SslContextFactory agora documenta claramente a separação entre truststore (certificados em que você confia) e keystore (seu certificado de cliente para mTLS), ambos no formato JKS.
+SslContextFactory.java — revisada para JKS
+
+package com.exemplo.http;
+
+import javax.net.ssl.*;
+import java.io.FileInputStream;
+import java.security.KeyStore;
+
+/**
+ * Constrói um SSLContext processando explicitamente arquivos JKS.
+ *
+ * Propriedades de sistema esperadas:
+ *
+ *   Obrigatório para evitar PKIX:
+ *     -Djavax.net.ssl.trustStore=<caminho>.jks
+ *     -Djavax.net.ssl.trustStorePassword=<senha>
+ *
+ *   Opcional — somente se o provider exigir certificado do cliente (mTLS):
+ *     -Djavax.net.ssl.keyStore=<caminho>.jks
+ *     -Djavax.net.ssl.keyStorePassword=<senha>
+ */
+public final class SslContextFactory {
+
+    private SslContextFactory() {}
+
+    public static SSLContext fromSystemProperties() throws Exception {
+        TrustManager[] trustManagers = loadTrustManagers();
+        KeyManager[]   keyManagers   = loadKeyManagers();
+
+        SSLContext ctx = SSLContext.getInstance("TLS");
+        ctx.init(keyManagers, trustManagers, null);
+        return ctx;
+    }
+
+    // -------------------------------------------------------------------------
+
+    /**
+     * Processa o truststore JKS.
+     * Contém os certificados das CAs que você aceita (ex: CA do token provider).
+     */
+    private static TrustManager[] loadTrustManagers() throws Exception {
+        String path     = System.getProperty("javax.net.ssl.trustStore");
+        String password = System.getProperty("javax.net.ssl.trustStorePassword", "");
+
+        if (path == null) {
+            // Sem arquivo explícito: delega ao cacerts padrão da JVM
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance(
+                TrustManagerFactory.getDefaultAlgorithm());
+            tmf.init((KeyStore) null);
+            return tmf.getTrustManagers();
+        }
+
+        KeyStore trustStore = loadJks(path, password);
+
+        // Log informativo — útil para diagnosticar quais CAs foram carregadas
+        logAliases("truststore", trustStore);
+
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance(
+            TrustManagerFactory.getDefaultAlgorithm());
+        tmf.init(trustStore);
+        return tmf.getTrustManagers();
+    }
+
+    /**
+     * Processa o keystore JKS do cliente.
+     * Necessário apenas em mTLS — quando o servidor exige seu certificado.
+     * Retorna null se -Djavax.net.ssl.keyStore não for informado.
+     */
+    private static KeyManager[] loadKeyManagers() throws Exception {
+        String path     = System.getProperty("javax.net.ssl.keyStore");
+        String password = System.getProperty("javax.net.ssl.keyStorePassword", "");
+
+        if (path == null) {
+            return null;  // sem mTLS
+        }
+
+        KeyStore keyStore = loadJks(path, password);
+        logAliases("keystore", keyStore);
+
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance(
+            KeyManagerFactory.getDefaultAlgorithm());
+        kmf.init(keyStore, password.toCharArray());
+        return kmf.getKeyManagers();
+    }
+
+    /** Abre, valida e carrega um arquivo JKS do disco. */
+    private static KeyStore loadJks(String path, String password) throws Exception {
+        KeyStore ks = KeyStore.getInstance("JKS");
+        try (FileInputStream fis = new FileInputStream(path)) {
+            ks.load(fis, password.toCharArray());
+        }
+
+        if (ks.size() == 0) {
+            throw new IllegalStateException(
+                "JKS carregado está vazio: " + path);
+        }
+
+        return ks;
+    }
+
+    /** Imprime os aliases do JKS para facilitar diagnóstico. */
+    private static void logAliases(String label, KeyStore ks) throws Exception {
+        java.util.Enumeration<String> aliases = ks.aliases();
+        System.out.println("[SslContextFactory] Entradas no " + label + ":");
+        while (aliases.hasMoreElements()) {
+            System.out.println("  - " + aliases.nextElement());
+        }
+    }
+}
+
+A classe ApiClient do cenário B permanece igual — ela já usa o SSLContext retornado por SslContextFactory.fromSystemProperties(), então apenas beneficia das correções acima sem nenhuma mudança.
+
+Resumo das correções aplicadas
+PontoAntes (JWS mencionado)Agora (JKS correto)Tipo do KeyStoreGenérico / não especificadoKeyStore.getInstance("JKS") explícitoTruststoreCarregado implicitamenteCarregado, validado e com log de aliasesKeystore cliente (mTLS)AusenteSuportado via -Djavax.net.ssl.keyStoreDiagnóstico PKIXNenhumLog dos aliases facilita identificar se o cert está no JKSCenário ASem factory customizadaJksSslRequestFactory aplica o JKS ao OAuth2RestTemplate
