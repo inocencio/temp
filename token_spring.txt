@@ -1,0 +1,398 @@
+Vou ler o skill de frontend antes de criar qualquer visualização, mas primeiro deixa eu focar no conteúdo técnico que você precisa.
+Vou criar uma resposta completa e bem estruturada para os dois cenários:Aqui está a solução completa para os dois cenários:
+
+Arquitetura geral
+Ambos os cenários resolvem o mesmo fluxo: carregar certificados do truststore → autenticar no token provider com client_id/client_secret → usar o bearer token em chamadas aos endpoints protegidos.
+
+Cenário A — Spring com RestTemplate
+A ideia é registrar um RestTemplate como bean com SSL configurado automaticamente via javax.net.ssl.* (já passados na JVM) e usar OAuth2RestTemplate ou um interceptor para gerenciar o token automaticamente.
+Dependências (pom.xml)
+
+<!-- Já presentes no seu projeto, confirmar versões -->
+<dependency>
+    <groupId>org.springframework.security.oauth</groupId>
+    <artifactId>spring-security-oauth2</artifactId>
+    <version>2.5.2.RELEASE</version>
+</dependency>
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-web</artifactId>
+</dependency>
+
+oauth2-context.xml — configuração declarativa
+
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+         http://www.springframework.org/schema/beans
+         http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- 1. Credenciais do cliente OAuth2 -->
+    <bean id="clientCredentials"
+          class="org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsResourceDetails">
+        <property name="accessTokenUri" value="${oauth.token.uri}"/>
+        <property name="clientId"       value="${oauth.client.id}"/>
+        <property name="clientSecret"   value="${oauth.client.secret}"/>
+        <property name="grantType"      value="client_credentials"/>
+        <!-- scope é opcional dependendo do provider -->
+        <!-- <property name="scope"><list><value>read</value></list></property> -->
+    </bean>
+
+    <!-- 2. Gerenciador de token em memória (cache automático + renovação) -->
+    <bean id="tokenManager"
+          class="org.springframework.security.oauth2.client.token.DefaultAccessTokenRequest"/>
+
+    <!-- 3. OAuth2RestTemplate — autentica e renova o token automaticamente -->
+    <bean id="oAuth2RestTemplate"
+          class="org.springframework.security.oauth2.client.OAuth2RestTemplate">
+        <constructor-arg ref="clientCredentials"/>
+    </bean>
+
+</beans>
+
+---------
+O OAuth2RestTemplate usa internamente um ClientCredentialsAccessTokenProvider que:
+
+faz POST no accessTokenUri com client_id e client_secret
+armazena o token e o reusa até expirar
+herda o truststore da JVM (javax.net.ssl.trustStore e javax.net.ssl.trustStorePassword)
+
+Importar no batch-context.xml
+
+<import resource="classpath:oauth2-context.xml"/>
+
+Uso no Tasklet do batch
+
+package com.exemplo.batch.tasklet;
+
+import org.springframework.batch.core.StepContribution;
+import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.security.oauth2.client.OAuth2RestTemplate;
+import org.springframework.http.*;
+
+public class ConsumoApiTasklet implements Tasklet {
+
+    // injetado via Spring XML: <property name="restTemplate" ref="oAuth2RestTemplate"/>
+    private OAuth2RestTemplate restTemplate;
+
+    public void setRestTemplate(OAuth2RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
+    @Override
+    public RepeatStatus execute(StepContribution contribution,
+                                ChunkContext chunkContext) throws Exception {
+
+        // O token é obtido e cacheado automaticamente pelo OAuth2RestTemplate.
+        // Nenhuma lógica manual de autenticação necessária.
+        ResponseEntity<String> response = restTemplate.getForEntity(
+            "https://api.exemplo.com/recurso",
+            String.class
+        );
+
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new RuntimeException("Falha na API: " + response.getStatusCode());
+        }
+
+        // processa response.getBody() ...
+        return RepeatStatus.FINISHED;
+    }
+}
+
+Declaração do step no batch-context.xml
+
+<bean id="consumoApiTasklet" class="com.exemplo.batch.tasklet.ConsumoApiTasklet">
+    <property name="restTemplate" ref="oAuth2RestTemplate"/>
+</bean>
+
+<batch:job id="consumoApiJob">
+    <batch:step id="consumoApiStep">
+        <batch:tasklet ref="consumoApiTasklet"/>
+    </batch:step>
+</batch:job>
+
+application.properties (ou equivalente)
+
+oauth.token.uri=https://provider.exemplo.com/oauth/token
+oauth.client.id=meu-client-id
+oauth.client.secret=meu-client-secret
+
+# Truststore passado na JVM, mas pode reforçar aqui também:
+# javax.net.ssl.trustStore=/path/to/truststore.jks
+# javax.net.ssl.trustStorePassword=senha
+
+Cenário B — Java 8 puro (sem Spring)
+Aqui o truststore já está configurado via -Djavax.net.ssl.* na JVM. A lógica carrega o SSLContext manualmente a partir dessas propriedades do sistema e usa HttpURLConnection para obter e usar o token.
+
+package com.exemplo.http;
+
+import javax.net.ssl.*;
+import java.io.FileInputStream;
+import java.security.KeyStore;
+
+/**
+ * Constrói um SSLContext lendo o truststore configurado
+ * via -Djavax.net.ssl.trustStore e -Djavax.net.ssl.trustStorePassword.
+ * Evita o erro PKIX sem precisar ignorar certificados.
+ */
+public final class SslContextFactory {
+
+    private SslContextFactory() {}
+
+    public static SSLContext fromSystemProperties() throws Exception {
+        String trustStorePath = System.getProperty("javax.net.ssl.trustStore");
+        String trustStorePass = System.getProperty("javax.net.ssl.trustStorePassword", "");
+        String trustStoreType = System.getProperty("javax.net.ssl.trustStoreType", "JKS");
+
+        if (trustStorePath == null) {
+            // Truststore não especificado: usa o default da JVM (cacerts)
+            return SSLContext.getDefault();
+        }
+
+        KeyStore ks = KeyStore.getInstance(trustStoreType);
+        try (FileInputStream fis = new FileInputStream(trustStorePath)) {
+            ks.load(fis, trustStorePass.toCharArray());
+        }
+
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance(
+            TrustManagerFactory.getDefaultAlgorithm()
+        );
+        tmf.init(ks);
+
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, tmf.getTrustManagers(), null);
+        return sslContext;
+    }
+}
+
+Classe principal de acesso à API
+
+package com.exemplo.http;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import java.io.*;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+
+/**
+ * Cliente HTTP sem dependências externas.
+ * Obtém bearer token via client_credentials e acessa endpoints protegidos.
+ */
+public class ApiClient {
+
+    private final String tokenUri;
+    private final String clientId;
+    private final String clientSecret;
+    private final SSLContext sslContext;
+
+    // Cache simples do token
+    private String cachedToken;
+    private long tokenExpiresAt = 0L;
+
+    public ApiClient(String tokenUri, String clientId, String clientSecret)
+            throws Exception {
+        this.tokenUri     = tokenUri;
+        this.clientId     = clientId;
+        this.clientSecret = clientSecret;
+        this.sslContext   = SslContextFactory.fromSystemProperties();
+    }
+
+    // -------------------------------------------------------------------------
+    // Obtenção do token (com cache simples)
+    // -------------------------------------------------------------------------
+
+    private String getBearerToken() throws Exception {
+        if (cachedToken != null && System.currentTimeMillis() < tokenExpiresAt) {
+            return cachedToken;
+        }
+
+        URL url = new URL(tokenUri);
+        HttpsURLConnection conn = openHttps(url);
+        conn.setRequestMethod("POST");
+        conn.setDoOutput(true);
+        conn.setRequestProperty("Content-Type",
+            "application/x-www-form-urlencoded");
+        conn.setRequestProperty("Accept", "application/json");
+
+        String body = "grant_type=client_credentials"
+            + "&client_id="     + URLEncoder.encode(clientId,     "UTF-8")
+            + "&client_secret=" + URLEncoder.encode(clientSecret, "UTF-8");
+
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(body.getBytes(StandardCharsets.UTF_8));
+        }
+
+        int status = conn.getResponseCode();
+        if (status != 200) {
+            String err = readStream(conn.getErrorStream());
+            throw new IOException("Token request failed [" + status + "]: " + err);
+        }
+
+        String json = readStream(conn.getInputStream());
+        conn.disconnect();
+
+        // Parse manual do JSON (evita dependências externas)
+        cachedToken    = extractJsonString(json, "access_token");
+        long expiresIn = extractJsonLong(json, "expires_in", 3600L);
+        // Renova 30s antes de expirar
+        tokenExpiresAt = System.currentTimeMillis() + (expiresIn - 30) * 1000L;
+
+        return cachedToken;
+    }
+
+    // -------------------------------------------------------------------------
+    // GET em endpoint protegido
+    // -------------------------------------------------------------------------
+
+    public String get(String endpointUrl) throws Exception {
+        String token = getBearerToken();
+
+        URL url = new URL(endpointUrl);
+        HttpsURLConnection conn = openHttps(url);
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("Authorization", "Bearer " + token);
+        conn.setRequestProperty("Accept", "application/json");
+        conn.setConnectTimeout(10_000);
+        conn.setReadTimeout(30_000);
+
+        int status = conn.getResponseCode();
+        if (status == 401) {
+            // Token rejeitado: invalida cache e tenta uma vez mais
+            cachedToken    = null;
+            tokenExpiresAt = 0L;
+            return get(endpointUrl);
+        }
+        if (status < 200 || status >= 300) {
+            String err = readStream(conn.getErrorStream());
+            throw new IOException("API error [" + status + "]: " + err);
+        }
+
+        String response = readStream(conn.getInputStream());
+        conn.disconnect();
+        return response;
+    }
+
+    // -------------------------------------------------------------------------
+    // POST em endpoint protegido
+    // -------------------------------------------------------------------------
+
+    public String post(String endpointUrl, String jsonBody) throws Exception {
+        String token = getBearerToken();
+
+        URL url = new URL(endpointUrl);
+        HttpsURLConnection conn = openHttps(url);
+        conn.setRequestMethod("POST");
+        conn.setDoOutput(true);
+        conn.setRequestProperty("Authorization",  "Bearer " + token);
+        conn.setRequestProperty("Content-Type",   "application/json");
+        conn.setRequestProperty("Accept",         "application/json");
+
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(jsonBody.getBytes(StandardCharsets.UTF_8));
+        }
+
+        int status = conn.getResponseCode();
+        if (status < 200 || status >= 300) {
+            String err = readStream(conn.getErrorStream());
+            throw new IOException("API error [" + status + "]: " + err);
+        }
+
+        String response = readStream(conn.getInputStream());
+        conn.disconnect();
+        return response;
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    private HttpsURLConnection openHttps(URL url) throws IOException {
+        HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+        conn.setSSLSocketFactory(sslContext.getSocketFactory());
+        return conn;
+    }
+
+    private static String readStream(InputStream is) throws IOException {
+        if (is == null) return "";
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(is, StandardCharsets.UTF_8))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line);
+            }
+            return sb.toString();
+        }
+    }
+
+    /** Extrai um valor string de JSON simples sem biblioteca. */
+    private static String extractJsonString(String json, String key) {
+        // Procura: "key":"value"
+        String pattern = "\"" + key + "\"";
+        int idx = json.indexOf(pattern);
+        if (idx < 0) throw new IllegalArgumentException(
+            "Campo '" + key + "' não encontrado no JSON: " + json);
+        int start = json.indexOf('"', idx + pattern.length() + 1) + 1;
+        int end   = json.indexOf('"', start);
+        return json.substring(start, end);
+    }
+
+    private static long extractJsonLong(String json, String key, long defaultVal) {
+        String pattern = "\"" + key + "\"";
+        int idx = json.indexOf(pattern);
+        if (idx < 0) return defaultVal;
+        int colon = json.indexOf(':', idx + pattern.length());
+        int start = colon + 1;
+        while (start < json.length() && json.charAt(start) == ' ') start++;
+        int end = start;
+        while (end < json.length() && Character.isDigit(json.charAt(end))) end++;
+        try { return Long.parseLong(json.substring(start, end)); }
+        catch (NumberFormatException e) { return defaultVal; }
+    }
+}
+
+Uso no Tasklet do batch (cenário B)
+
+package com.exemplo.batch.tasklet;
+
+import com.exemplo.http.ApiClient;
+import org.springframework.batch.core.StepContribution;
+import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.repeat.RepeatStatus;
+
+public class ConsumoApiPuroTasklet implements Tasklet {
+
+    private String tokenUri;
+    private String clientId;
+    private String clientSecret;
+    private String apiEndpoint;
+
+    // setters para injeção via XML...
+
+    @Override
+    public RepeatStatus execute(StepContribution contribution,
+                                ChunkContext chunkContext) throws Exception {
+
+        ApiClient client = new ApiClient(tokenUri, clientId, clientSecret);
+        String resultado  = client.get(apiEndpoint);
+
+        // processa resultado...
+        return RepeatStatus.FINISHED;
+    }
+
+    public void setTokenUri(String tokenUri)         { this.tokenUri = tokenUri; }
+    public void setClientId(String clientId)         { this.clientId = clientId; }
+    public void setClientSecret(String secret)       { this.clientSecret = secret; }
+    public void setApiEndpoint(String apiEndpoint)   { this.apiEndpoint = apiEndpoint; }
+}
+
+Comparativo e pontos de atenção
+AspectoCenário A (Spring)Cenário B (Java puro)Dependênciaspring-security-oauth2NenhumaCache do tokenAutomático (OAuth2RestTemplate)Manual (campo + timestamp)Renovação automáticaSimSim (retry em 401)Truststore PKIXHerda da JVM automaticamenteCarrega via System.getPropertyConfiguraçãoXML declarativoCódigo Java explícitoTestabilidadeMock via Spring TestFácil de mockar HttpURLConnection
+
+Sobre o PKIX: em ambos os cenários, o truststore apontado por -Djavax.net.ssl.trustStore é carregado automaticamente — no cenário A, pela JVM/Spring; no cenário B, explicitamente pelo SslContextFactory. Se o certificado do provider estiver no truststore, o erro PKIX path building failed não ocorrerá.
+Se o JWS tiver certificados em formato diferente (ex: .p12/PKCS12), basta trocar KeyStore.getInstance("JKS") por KeyStore.getInstance("PKCS12") no SslContextFactory, ou passar -Djavax.net.ssl.trustStoreType=PKCS12.
